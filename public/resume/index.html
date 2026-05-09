@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Resume / CV of Michael Mote Hansen — entrepreneur, AI researcher, and innovation facilitator based in the Nordics.">
+  <meta name="author" content="Michael Mote Hansen">
+  <meta name="theme-color" content="#ffffff">
+
+  <meta property="og:title" content="Michael Mote Hansen — Resume / CV">
+  <meta property="og:description" content="Builder and researcher working at the intersection of AI, innovation, and human potential.">
+  <meta property="og:type" content="profile">
+  <meta property="og:url" content="https://michael.motethansen.com">
+
+  <title>Michael Mote Hansen — Resume / CV</title>
+
+  <link rel="stylesheet" href="/style.css">
+
+  <style>
+    :root {
+      --resume-max-width: 880px;
+    }
+
+    .resume-nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .resume-nav__inner {
+      max-width: var(--resume-max-width);
+      margin: 0 auto;
+      padding: 1rem var(--gutter);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .resume-nav__back {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--color-muted);
+    }
+
+    .resume-nav__back:hover {
+      color: var(--color-text);
+    }
+
+    .resume-nav__brand {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--color-text);
+    }
+
+    .resume {
+      max-width: var(--resume-max-width);
+      margin: 0 auto;
+      padding: 4rem var(--gutter) 5rem;
+    }
+
+    .resume__header {
+      padding-bottom: 2.5rem;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 3rem;
+    }
+
+    .resume__name {
+      font-size: clamp(2.25rem, 5vw, 3.25rem);
+      font-weight: 700;
+      letter-spacing: -0.035em;
+      line-height: 1.05;
+      margin-bottom: 0.5rem;
+    }
+
+    .resume__title {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--color-text);
+      letter-spacing: -0.005em;
+      margin-bottom: 1.25rem;
+    }
+
+    .resume__contact {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem;
+      font-size: 0.9rem;
+      color: var(--color-muted);
+    }
+
+    .resume__contact a {
+      color: var(--color-muted);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: color 150ms ease, border-color 150ms ease;
+    }
+
+    .resume__contact a:hover {
+      color: var(--color-accent);
+      border-bottom-color: var(--color-accent);
+    }
+
+    .resume__section {
+      margin-bottom: 3rem;
+    }
+
+    .resume__section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--color-accent);
+      padding-bottom: 0.6rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .resume__summary {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--color-text);
+      max-width: 65ch;
+    }
+
+    .resume__list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .resume__item {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 1.5rem;
+      align-items: baseline;
+    }
+
+    .resume__item-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--color-text);
+    }
+
+    .resume__item-label a {
+      color: var(--color-text);
+      border-bottom: 1px solid var(--color-border-strong);
+    }
+
+    .resume__item-label a:hover {
+      color: var(--color-accent);
+      border-bottom-color: var(--color-accent);
+    }
+
+    .resume__item-body {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--color-muted);
+    }
+
+    .resume__skills {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .resume__skill {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 1.5rem;
+      align-items: baseline;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .resume__skill:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .resume__skill-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text);
+    }
+
+    .resume__skill-body {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--color-muted);
+    }
+
+    .resume__research-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      color: var(--color-muted);
+      line-height: 1.6;
+    }
+
+    .resume__research-meta strong {
+      color: var(--color-text);
+      font-weight: 600;
+    }
+
+    .resume-footer {
+      max-width: var(--resume-max-width);
+      margin: 0 auto;
+      padding: 2rem var(--gutter) 3rem;
+      border-top: 1px solid var(--color-border);
+      font-size: 0.85rem;
+      color: var(--color-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .resume {
+        padding: 2.5rem var(--gutter) 3rem;
+      }
+
+      .resume__item,
+      .resume__skill {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+      }
+    }
+
+    @media print {
+      :root {
+        --color-text: #000000;
+        --color-muted: #333333;
+        --color-accent: #000000;
+        --color-border: #cccccc;
+      }
+
+      body {
+        font-size: 10.5pt;
+        color: #000;
+        background: #fff;
+      }
+
+      .resume-nav,
+      .resume-footer {
+        display: none;
+      }
+
+      .resume {
+        max-width: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .resume__header {
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .resume__section {
+        margin-bottom: 1.5rem;
+        page-break-inside: avoid;
+      }
+
+      .resume__name {
+        font-size: 22pt;
+      }
+
+      .resume__title {
+        font-size: 11pt;
+      }
+
+      .resume__section-title {
+        color: #000;
+        font-size: 9pt;
+      }
+
+      .resume__contact a,
+      .resume__item-label a {
+        color: #000;
+        border-bottom: none;
+      }
+
+      a {
+        color: #000;
+      }
+
+      .resume__item,
+      .resume__skill {
+        gap: 1rem;
+      }
+
+      .resume__item-body,
+      .resume__skill-body,
+      .resume__research-meta {
+        color: #222;
+      }
+
+      * {
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <nav class="resume-nav" aria-label="Primary">
+    <div class="resume-nav__inner">
+      <a class="resume-nav__back" href="https://motethansen.com">← motethansen.com</a>
+      <span class="resume-nav__brand">Resume / CV</span>
+    </div>
+  </nav>
+
+  <main id="main" class="resume">
+
+    <header class="resume__header">
+      <h1 class="resume__name">Michael Mote Hansen</h1>
+      <p class="resume__title">Entrepreneur · AI Researcher · Innovation Facilitator</p>
+      <div class="resume__contact">
+        <span>Nordics</span>
+        <a href="mailto:hansenmichaelmotet@gmail.com">hansenmichaelmotet@gmail.com</a>
+        <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">linkedin.com/in/motethansen</a>
+        <a href="https://github.com/motethansen" target="_blank" rel="noopener">github.com/motethansen</a>
+        <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID 0000-0001-7645-5958</a>
+      </div>
+    </header>
+
+    <section class="resume__section" aria-labelledby="summary-title">
+      <h2 id="summary-title" class="resume__section-title">Summary</h2>
+      <p class="resume__summary">Builder and researcher working at the intersection of AI, innovation, and human potential. Founder of multiple ventures across consumer AI, urban tech, and facilitation. Research focus on AI adoption, innovation management, and digital transformation.</p>
+    </section>
+
+    <section class="resume__section" aria-labelledby="ventures-title">
+      <h2 id="ventures-title" class="resume__section-title">Ventures &amp; Projects</h2>
+      <ul class="resume__list">
+        <li class="resume__item">
+          <div class="resume__item-label">
+            <a href="https://winedragons.asia" target="_blank" rel="noopener">Wine Dragons</a>
+          </div>
+          <div class="resume__item-body">AI-powered wine discovery platform for Asia. <em>winedragons.asia</em></div>
+        </li>
+        <li class="resume__item">
+          <div class="resume__item-label">
+            <a href="https://urbanlife.works" target="_blank" rel="noopener">UrbanLife Works</a>
+          </div>
+          <div class="resume__item-body">Urban innovation publication and smart-city insights. <em>urbanlife.works</em></div>
+        </li>
+        <li class="resume__item">
+          <div class="resume__item-label">
+            <a href="https://ref.team" target="_blank" rel="noopener">ref.team</a>
+          </div>
+          <div class="resume__item-body">Innovation facilitation and AI awareness programmes. <em>ref.team</em></div>
+        </li>
+        <li class="resume__item">
+          <div class="resume__item-label">
+            <a href="https://github.com/motethansen/distributed-infra" target="_blank" rel="noopener">Distributed Agent Stack</a>
+          </div>
+          <div class="resume__item-body">Multi-machine AI orchestration with Claude, Gemini, and Codex across a Tailscale mesh. <em>github.com/motethansen/distributed-infra</em></div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="resume__section" aria-labelledby="skills-title">
+      <h2 id="skills-title" class="resume__section-title">Skills &amp; Expertise</h2>
+      <div class="resume__skills">
+        <div class="resume__skill">
+          <div class="resume__skill-label">AI &amp; ML</div>
+          <div class="resume__skill-body">Claude, Gemini, LLM orchestration, agent systems</div>
+        </div>
+        <div class="resume__skill">
+          <div class="resume__skill-label">Mobile</div>
+          <div class="resume__skill-body">iOS (Swift, Xcode), Android (Kotlin, Gradle), Flutter</div>
+        </div>
+        <div class="resume__skill">
+          <div class="resume__skill-label">Backend</div>
+          <div class="resume__skill-body">Python, Node.js, FastAPI, Docker</div>
+        </div>
+        <div class="resume__skill">
+          <div class="resume__skill-label">Infrastructure</div>
+          <div class="resume__skill-body">Cloudflare (Pages, Workers, KV), Tailscale, SQLite</div>
+        </div>
+        <div class="resume__skill">
+          <div class="resume__skill-label">Research</div>
+          <div class="resume__skill-body">Innovation management, technology adoption, digital transformation</div>
+        </div>
+        <div class="resume__skill">
+          <div class="resume__skill-label">Facilitation</div>
+          <div class="resume__skill-body">Design thinking, AI awareness workshops, innovation sprints</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="resume__section" aria-labelledby="research-title">
+      <h2 id="research-title" class="resume__section-title">Research</h2>
+      <div class="resume__research-meta">
+        <p><strong>ORCID:</strong> <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">0000-0001-7645-5958</a></p>
+        <p><strong>Interests:</strong> AI adoption, innovation management, digital transformation</p>
+        <p><strong>Publications:</strong> <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">Full publication list on ORCID →</a></p>
+      </div>
+    </section>
+
+    <section class="resume__section" aria-labelledby="writing-title">
+      <h2 id="writing-title" class="resume__section-title">Writing</h2>
+      <ul class="resume__list">
+        <li class="resume__item">
+          <div class="resume__item-label">
+            <a href="https://urbanlife.works" target="_blank" rel="noopener">Substack — Urban AI</a>
+          </div>
+          <div class="resume__item-body">Essays on urban innovation, AI in cities, and the future of work. <em>urbanlife.works</em></div>
+        </li>
+        <li class="resume__item">
+          <div class="resume__item-label">
+            <a href="https://medium.com/@motethansen" target="_blank" rel="noopener">Medium — @motethansen</a>
+          </div>
+          <div class="resume__item-body">Notes on AI, organisations, and the practice of building. <em>medium.com/@motethansen</em></div>
+        </li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer class="resume-footer">
+    <span>&copy; <time datetime="2026">2026</time> Michael Mote Hansen</span>
+    <span><a href="https://motethansen.com">motethansen.com</a></span>
+  </footer>
+
+</body>
+</html>
