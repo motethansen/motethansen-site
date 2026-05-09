@@ -519,12 +519,8 @@
       <a class="orcid-link" href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">
         ORCID · 0000-0001-7645-5958 →
       </a>
-      <div class="pubs">
-        <div class="pub"><strong>TraceTogether contact tracing: a Smart Nation innovation</strong> — co-authored study on Singapore's COVID-19 digital tracing approach.</div>
-        <div class="pub"><strong>Smart City citizen engagement</strong> — research on citizen perceptions and value propositions in Singapore's Smart Nation initiatives.</div>
-        <div class="pub"><strong>IoT value propositions in Thai Smart Cities</strong> — survey and interview-based study on digital payment innovation and government collaboration.</div>
-        <div class="pub"><strong>Design Thinking in public sector digital transformation</strong> — methodology and case studies from Southeast Asian deployments.</div>
-        <div class="pub"><strong>Lean UX for civic technology</strong> — applied research from university teaching and field consultancy.</div>
+      <div id="resume-pubs" class="pubs">
+        <div class="pub" style="color:var(--muted)">Loading publications from ORCID…</div>
       </div>
     </section>
 
@@ -602,6 +598,49 @@
       <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID</a>
     </span>
   </footer>
+
+  <script>
+    // ── ORCID publications ────────────────────────────
+    (async () => {
+      const el = document.getElementById('resume-pubs');
+      if (!el) return;
+      try {
+        const res  = await fetch('https://pub.orcid.org/v3.0/0000-0001-7645-5958/works', { headers: { 'Accept': 'application/json' } });
+        const data = await res.json();
+        const groups = data.group || [];
+        if (!groups.length) { el.innerHTML = '<div class="pub" style="color:var(--muted)">No publications found.</div>'; return; }
+
+        const typeLabel = { 'journal-article': 'Journal Article', 'other': 'Thesis / Other', 'book-chapter': 'Book Chapter', 'conference-paper': 'Conference Paper' };
+        function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function escA(s) { return String(s||'').replace(/"/g,'&quot;'); }
+
+        const items = groups.map(g => {
+          const w = g['work-summary'][0];
+          const title   = w?.title?.title?.value || '';
+          const year    = w?.['publication-date']?.year?.value || '';
+          const journal = w?.['journal-title']?.value || '';
+          const wtype   = typeLabel[w?.type] || w?.type || '';
+          const url     = w?.url?.value || '';
+          const doi     = (g['external-ids']?.['external-id'] || []).find(e => e['external-id-type'] === 'doi')?.['external-id-value'] || '';
+          const href    = url || (doi ? `https://doi.org/${doi}` : '');
+          return { title, year, journal, wtype, href, doi };
+        }).sort((a,b) => (b.year||0) - (a.year||0));
+
+        el.innerHTML = items.map(p => `
+          <div class="pub">
+            <div class="pub-meta" style="display:flex;gap:0.75rem;align-items:baseline;margin-bottom:0.2rem">
+              <span style="font-size:0.78rem;font-weight:700;color:var(--accent)">${esc(p.year)}</span>
+              <span style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">${esc(p.wtype)}</span>
+            </div>
+            ${p.href ? `<a href="${escA(p.href)}" target="_blank" rel="noopener" style="font-weight:600;color:var(--text);text-decoration:none">${esc(p.title)}</a>` : `<strong>${esc(p.title)}</strong>`}
+            ${p.journal ? `<span style="display:block;font-size:0.85rem;font-style:italic;color:var(--teal);margin-top:0.15rem">${esc(p.journal)}</span>` : ''}
+            ${p.doi ? `<a href="https://doi.org/${escA(p.doi)}" target="_blank" rel="noopener" style="display:block;font-size:0.75rem;font-family:monospace;color:var(--muted);margin-top:0.15rem;text-decoration:none">DOI: ${esc(p.doi)}</a>` : ''}
+          </div>`).join('');
+      } catch(e) {
+        el.innerHTML = '<div class="pub">Could not load publications — <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">view on ORCID</a>.</div>';
+      }
+    })();
+  </script>
 
   <script>
     const form   = document.getElementById('resume-form');

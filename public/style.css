@@ -583,6 +583,83 @@ img {
   color: var(--color-text-muted);
 }
 
+/* ── ORCID publications list ───────────────────────── */
+
+.pub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.pub-item {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+  align-items: start;
+}
+
+.pub-item__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.1rem;
+}
+
+.pub-item__year {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.pub-item__type {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+}
+
+.pub-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pub-item__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 150ms;
+}
+
+a.pub-item__title:hover {
+  color: var(--color-accent);
+}
+
+.pub-item__journal {
+  font-size: 0.875rem;
+  color: var(--color-teal);
+  font-style: italic;
+}
+
+.pub-item__doi {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-family: monospace;
+  transition: color 150ms;
+}
+
+.pub-item__doi:hover {
+  color: var(--color-accent);
+}
+
 /* ── Writing card grid ─────────────────────────────── */
 
 .writing-grid {

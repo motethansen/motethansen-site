@@ -31,7 +31,7 @@
         <li><a href="#refteam">ref.team</a></li>
         <li><a href="#research">Research</a></li>
         <li><a href="#writing">Writing</a></li>
-        <li><a href="#resume">Resume</a></li>
+        <li><a href="https://michael.motethansen.com" target="_blank" rel="noopener">Resume</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
     </nav>
@@ -195,19 +195,8 @@
         <header class="section__head">
           <p class="section__eyebrow">Resume / CV</p>
           <h2 id="resume-title" class="section__title">Background.</h2>
-          <p class="section__lede">Two decades across mobile and backend engineering, AI research, and innovation consulting — moving between the academy, the studio, and the field.</p>
+          <p class="section__lede">Full resume and career timeline at <a href="https://michael.motethansen.com" target="_blank" rel="noopener" style="color:var(--color-accent)">michael.motethansen.com</a> — opening now.</p>
         </header>
-
-        <div class="meta-row">
-          <a class="meta-row__link" href="https://michael.motethansen.com" target="_blank" rel="noopener">
-            <span class="meta-row__label">Full Resume</span>
-            <span class="meta-row__value">michael.motethansen.com <span aria-hidden="true">→</span></span>
-          </a>
-          <a class="meta-row__link" href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">
-            <span class="meta-row__label">LinkedIn</span>
-            <span class="meta-row__value">linkedin.com/in/motethansen <span aria-hidden="true">→</span></span>
-          </a>
-        </div>
       </div>
     </section>
 
@@ -272,6 +261,57 @@
   </footer>
 
   <script>
+    // ── #resume hash redirect ─────────────────────────
+    (function() {
+      if (window.location.hash === '#resume') {
+        window.location.replace('https://michael.motethansen.com');
+      }
+    })();
+
+    // ── ORCID publications ────────────────────────────
+    (async () => {
+      const el = document.getElementById('publications-list');
+      if (!el) return;
+      try {
+        const res = await fetch('https://pub.orcid.org/v3.0/0000-0001-7645-5958/works', {
+          headers: { 'Accept': 'application/json' }
+        });
+        const data = await res.json();
+        const groups = data.group || [];
+        if (!groups.length) { el.innerHTML = '<p class="placeholder__text">No publications found.</p>'; return; }
+
+        const typeLabel = { 'journal-article': 'Journal Article', 'other': 'Thesis / Other', 'book-chapter': 'Book Chapter', 'conference-paper': 'Conference Paper' };
+
+        const items = groups.map(g => {
+          const w = g['work-summary'][0];
+          const title = w?.title?.title?.value || '';
+          const year  = w?.['publication-date']?.year?.value || '';
+          const journal = w?.['journal-title']?.value || '';
+          const wtype = typeLabel[w?.type] || w?.type || '';
+          const url   = w?.url?.value || '';
+          const doi   = (g['external-ids']?.['external-id'] || []).find(e => e['external-id-type'] === 'doi')?.['external-id-value'] || '';
+          const href  = url || (doi ? `https://doi.org/${doi}` : '');
+          return { title, year, journal, wtype, href, doi };
+        }).sort((a,b) => (b.year||0) - (a.year||0));
+
+        el.className = 'pub-list';
+        el.innerHTML = items.map(p => `
+          <div class="pub-item">
+            <div class="pub-item__meta">
+              <span class="pub-item__year">${escHtml(p.year)}</span>
+              <span class="pub-item__type">${escHtml(p.wtype)}</span>
+            </div>
+            <div class="pub-item__body">
+              ${p.href ? `<a class="pub-item__title" href="${escAttr(p.href)}" target="_blank" rel="noopener">${escHtml(p.title)}</a>` : `<span class="pub-item__title">${escHtml(p.title)}</span>`}
+              ${p.journal ? `<span class="pub-item__journal">${escHtml(p.journal)}</span>` : ''}
+              ${p.doi ? `<a class="pub-item__doi" href="https://doi.org/${escAttr(p.doi)}" target="_blank" rel="noopener">DOI: ${escHtml(p.doi)}</a>` : ''}
+            </div>
+          </div>`).join('');
+      } catch(e) {
+        el.innerHTML = '<p class="placeholder__text">Could not load publications — <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">view on ORCID</a>.</p>';
+      }
+    })();
+
     // ── Writing feed ──────────────────────────────────
     (async () => {
       const grid = document.getElementById('writing-feed');
