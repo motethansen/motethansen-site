@@ -193,20 +193,41 @@
           <p class="section__lede">Open to research collaborations, advisory work, and conversations about AI in organisations.</p>
         </header>
 
-        <ul class="contact-list">
-          <li>
-            <span class="contact-list__label">Email</span>
-            <a href="mailto:hansenmichaelmotet@gmail.com">hansenmichaelmotet@gmail.com</a>
-          </li>
-          <li>
-            <span class="contact-list__label">GitHub</span>
-            <a href="https://github.com/motethansen" target="_blank" rel="noopener">github.com/motethansen</a>
-          </li>
-          <li>
-            <span class="contact-list__label">LinkedIn</span>
-            <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">linkedin.com/in/motethansen</a>
-          </li>
-        </ul>
+        <div class="contact-layout">
+          <form class="contact-form" id="contact-form" novalidate>
+            <div class="form-row">
+              <label class="form-label" for="cf-name">Name</label>
+              <input class="form-input" type="text" id="cf-name" name="name" placeholder="Your name" required autocomplete="name">
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="cf-email">Email</label>
+              <input class="form-input" type="email" id="cf-email" name="email" placeholder="your@email.com" required autocomplete="email">
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="cf-message">Message</label>
+              <textarea class="form-input form-textarea" id="cf-message" name="message" rows="5" placeholder="What would you like to discuss?" required></textarea>
+            </div>
+            <div class="form-footer">
+              <button class="button button--primary" type="submit" id="cf-submit">Send message</button>
+              <p class="form-status" id="form-status" aria-live="polite"></p>
+            </div>
+          </form>
+
+          <ul class="contact-list">
+            <li>
+              <span class="contact-list__label">GitHub</span>
+              <a href="https://github.com/motethansen" target="_blank" rel="noopener">github.com/motethansen</a>
+            </li>
+            <li>
+              <span class="contact-list__label">LinkedIn</span>
+              <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">linkedin.com/in/motethansen</a>
+            </li>
+            <li>
+              <span class="contact-list__label">Mastodon</span>
+              <a href="https://me.dm/@motethansen" target="_blank" rel="noopener me">@motethansen@me.dm</a>
+            </li>
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -218,11 +239,46 @@
       <ul class="site-footer__links">
         <li><a href="https://github.com/motethansen" target="_blank" rel="noopener">GitHub</a></li>
         <li><a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">LinkedIn</a></li>
+        <li><a href="https://me.dm/@motethansen" target="_blank" rel="noopener me">Mastodon</a></li>
         <li><a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID</a></li>
-        <li><a href="mailto:hansenmichaelmotet@gmail.com">Email</a></li>
       </ul>
     </div>
   </footer>
+
+  <script>
+    const form = document.getElementById('contact-form');
+    const status = document.getElementById('form-status');
+    const btn = document.getElementById('cf-submit');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      status.textContent = '';
+      status.className = 'form-status';
+
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          body: new FormData(form),
+        });
+        const data = await res.json();
+        if (data.success) {
+          status.textContent = "Message sent — I'll be in touch soon.";
+          status.className = 'form-status form-status--ok';
+          form.reset();
+        } else {
+          throw new Error(data.error || 'Unknown error');
+        }
+      } catch (err) {
+        status.textContent = 'Something went wrong. Please try again.';
+        status.className = 'form-status form-status--err';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send message';
+      }
+    });
+  </script>
 
 </body>
 </html>
