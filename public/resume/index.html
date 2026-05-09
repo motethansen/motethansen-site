@@ -3,312 +3,170 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Resume / CV of Michael Mote Hansen — entrepreneur, AI researcher, and innovation facilitator based in the Nordics.">
+  <meta name="description" content="Resume / CV of Michael Mote Hansen — Smart City researcher, entrepreneur, and innovation facilitator with 30+ years in technology and digital transformation.">
   <meta name="author" content="Michael Mote Hansen">
   <meta name="theme-color" content="#ffffff">
-
   <meta property="og:title" content="Michael Mote Hansen — Resume / CV">
-  <meta property="og:description" content="Builder and researcher working at the intersection of AI, innovation, and human potential.">
+  <meta property="og:description" content="Smart City researcher, entrepreneur, and innovation facilitator. Partner at ReF.Team · PhD candidate · Adjunct Lecturer at JCU Singapore.">
   <meta property="og:type" content="profile">
   <meta property="og:url" content="https://michael.motethansen.com">
-
   <title>Michael Mote Hansen — Resume / CV</title>
-
   <link rel="stylesheet" href="/style.css">
-
   <style>
-    :root {
-      --resume-max-width: 880px;
-    }
+    :root { --resume-max-width: 900px; }
 
     .resume-nav {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: rgba(255, 255, 255, 0.85);
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255,255,255,0.88);
       backdrop-filter: saturate(180%) blur(12px);
       -webkit-backdrop-filter: saturate(180%) blur(12px);
       border-bottom: 1px solid var(--color-border);
     }
-
     .resume-nav__inner {
-      max-width: var(--resume-max-width);
-      margin: 0 auto;
+      max-width: var(--resume-max-width); margin: 0 auto;
       padding: 1rem var(--gutter);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
     }
-
-    .resume-nav__back {
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--color-muted);
+    .resume-nav__back { font-size: 0.9rem; font-weight: 500; color: var(--color-muted); }
+    .resume-nav__back:hover { color: var(--color-text); }
+    .resume-nav__actions { display: flex; gap: 1rem; align-items: center; }
+    .resume-nav__print {
+      font-size: 0.85rem; font-weight: 500; color: var(--color-muted);
+      cursor: pointer; border: none; background: none; padding: 0;
     }
-
-    .resume-nav__back:hover {
-      color: var(--color-text);
-    }
-
-    .resume-nav__brand {
-      font-size: 0.9rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      color: var(--color-text);
-    }
+    .resume-nav__print:hover { color: var(--color-accent); }
 
     .resume {
-      max-width: var(--resume-max-width);
-      margin: 0 auto;
-      padding: 4rem var(--gutter) 5rem;
+      max-width: var(--resume-max-width); margin: 0 auto;
+      padding: 3.5rem var(--gutter) 5rem;
     }
 
+    /* Header */
     .resume__header {
-      padding-bottom: 2.5rem;
-      border-bottom: 1px solid var(--color-border);
-      margin-bottom: 3rem;
+      padding-bottom: 2rem; border-bottom: 1px solid var(--color-border); margin-bottom: 2.5rem;
     }
-
     .resume__name {
-      font-size: clamp(2.25rem, 5vw, 3.25rem);
-      font-weight: 700;
-      letter-spacing: -0.035em;
-      line-height: 1.05;
-      margin-bottom: 0.5rem;
+      font-size: clamp(2rem, 5vw, 3rem); font-weight: 700;
+      letter-spacing: -0.035em; line-height: 1.05; margin-bottom: 0.4rem;
     }
-
-    .resume__title {
-      font-size: 1.1rem;
-      font-weight: 500;
-      color: var(--color-text);
-      letter-spacing: -0.005em;
-      margin-bottom: 1.25rem;
+    .resume__headline {
+      font-size: 1.05rem; font-weight: 500; color: var(--color-muted);
+      margin-bottom: 1.25rem; letter-spacing: -0.005em;
     }
-
     .resume__contact {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 1.5rem;
-      font-size: 0.9rem;
-      color: var(--color-muted);
+      display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem;
+      font-size: 0.875rem; color: var(--color-muted);
     }
+    .resume__contact a { color: var(--color-muted); border-bottom: 1px solid transparent; transition: color 150ms, border-color 150ms; }
+    .resume__contact a:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
 
-    .resume__contact a {
-      color: var(--color-muted);
-      text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: color 150ms ease, border-color 150ms ease;
-    }
-
-    .resume__contact a:hover {
-      color: var(--color-accent);
-      border-bottom-color: var(--color-accent);
-    }
-
-    .resume__section {
-      margin-bottom: 3rem;
-    }
-
+    /* Sections */
+    .resume__section { margin-bottom: 2.75rem; }
     .resume__section-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--color-accent);
-      padding-bottom: 0.6rem;
-      margin-bottom: 1.5rem;
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--color-accent);
+      padding-bottom: 0.5rem; margin-bottom: 1.5rem;
       border-bottom: 1px solid var(--color-border);
     }
-
     .resume__summary {
-      font-size: 1.05rem;
-      line-height: 1.7;
-      color: var(--color-text);
-      max-width: 65ch;
+      font-size: 1rem; line-height: 1.72; color: var(--color-text); max-width: 70ch;
     }
 
-    .resume__list {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+    /* Experience items */
+    .resume__exp-list { display: flex; flex-direction: column; gap: 2rem; }
+    .resume__exp {  }
+    .resume__exp-header {
+      display: flex; flex-wrap: wrap; justify-content: space-between;
+      align-items: baseline; gap: 0.25rem 1.5rem; margin-bottom: 0.25rem;
     }
-
-    .resume__item {
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 1.5rem;
-      align-items: baseline;
-    }
-
-    .resume__item-label {
-      font-size: 0.95rem;
-      font-weight: 600;
+    .resume__exp-org {
+      font-size: 0.975rem; font-weight: 700; color: var(--color-text);
       letter-spacing: -0.01em;
-      color: var(--color-text);
     }
-
-    .resume__item-label a {
-      color: var(--color-text);
-      border-bottom: 1px solid var(--color-border-strong);
+    .resume__exp-period {
+      font-size: 0.82rem; font-weight: 500; color: var(--color-muted);
+      white-space: nowrap;
     }
-
-    .resume__item-label a:hover {
-      color: var(--color-accent);
-      border-bottom-color: var(--color-accent);
+    .resume__exp-role {
+      font-size: 0.9rem; font-weight: 500; color: var(--color-muted);
+      margin-bottom: 0.6rem;
     }
-
-    .resume__item-body {
-      font-size: 0.95rem;
-      line-height: 1.6;
-      color: var(--color-muted);
+    .resume__exp-body {
+      font-size: 0.9rem; line-height: 1.65; color: var(--color-muted);
     }
+    .resume__exp-body ul { list-style: disc; padding-left: 1.25rem; margin-top: 0.4rem; }
+    .resume__exp-body li { margin: 0.3rem 0; }
 
-    .resume__skills {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    /* Earlier career */
+    .resume__earlier {
+      font-size: 0.875rem; line-height: 1.7; color: var(--color-muted);
     }
-
-    .resume__skill {
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 1.5rem;
-      align-items: baseline;
-      padding-bottom: 1rem;
+    .resume__earlier-row {
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 0.5rem 2rem; padding: 0.5rem 0;
       border-bottom: 1px solid var(--color-border);
+      align-items: baseline;
     }
+    .resume__earlier-row:last-child { border-bottom: none; }
+    .resume__earlier-org { font-weight: 600; color: var(--color-text); }
+    .resume__earlier-period { font-size: 0.8rem; color: var(--color-muted); white-space: nowrap; text-align: right; }
+    .resume__earlier-role { color: var(--color-muted); font-size: 0.85rem; grid-column: 1; }
 
-    .resume__skill:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
+    /* Education */
+    .resume__edu-list { display: flex; flex-direction: column; gap: 1.5rem; }
+    .resume__edu { }
+    .resume__edu-header {
+      display: flex; flex-wrap: wrap; justify-content: space-between;
+      align-items: baseline; gap: 0.25rem 1.5rem;
     }
+    .resume__edu-org { font-size: 0.975rem; font-weight: 700; color: var(--color-text); }
+    .resume__edu-period { font-size: 0.82rem; color: var(--color-muted); white-space: nowrap; }
+    .resume__edu-degree { font-size: 0.9rem; color: var(--color-muted); margin-top: 0.2rem; }
 
-    .resume__skill-label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--color-text);
+    /* Skills grid */
+    .resume__skills {
+      display: grid; grid-template-columns: 160px 1fr;
+      gap: 0.9rem 2rem;
+      font-size: 0.9rem;
     }
+    .resume__skill-label { font-weight: 600; color: var(--color-text); }
+    .resume__skill-value { color: var(--color-muted); line-height: 1.55; }
 
-    .resume__skill-body {
-      font-size: 0.95rem;
-      line-height: 1.6;
-      color: var(--color-muted);
-    }
+    /* Research */
+    .resume__pubs { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; }
+    .resume__pub { font-size: 0.875rem; color: var(--color-muted); line-height: 1.55; padding-left: 1rem; border-left: 2px solid var(--color-border); }
 
-    .resume__research-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      font-size: 0.95rem;
-      color: var(--color-muted);
-      line-height: 1.6;
-    }
+    /* Meta row: languages, certs */
+    .resume__meta { display: flex; flex-direction: column; gap: 0.75rem; }
+    .resume__meta-row { display: grid; grid-template-columns: 160px 1fr; gap: 0.5rem 2rem; font-size: 0.9rem; align-items: baseline; }
+    .resume__meta-label { font-weight: 600; color: var(--color-text); }
+    .resume__meta-value { color: var(--color-muted); line-height: 1.55; }
 
-    .resume__research-meta strong {
-      color: var(--color-text);
-      font-weight: 600;
-    }
-
+    /* Footer */
     .resume-footer {
-      max-width: var(--resume-max-width);
-      margin: 0 auto;
-      padding: 2rem var(--gutter) 3rem;
+      max-width: var(--resume-max-width); margin: 0 auto;
+      padding: 1.5rem var(--gutter) 3rem;
       border-top: 1px solid var(--color-border);
-      font-size: 0.85rem;
-      color: var(--color-muted);
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
+      font-size: 0.82rem; color: var(--color-muted);
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
     }
 
     @media (max-width: 640px) {
-      .resume {
-        padding: 2.5rem var(--gutter) 3rem;
-      }
-
-      .resume__item,
-      .resume__skill {
-        grid-template-columns: 1fr;
-        gap: 0.4rem;
-      }
+      .resume { padding: 2rem var(--gutter) 3rem; }
+      .resume__skills, .resume__meta-row { grid-template-columns: 1fr; gap: 0.2rem; }
+      .resume__earlier-row { grid-template-columns: 1fr; }
+      .resume__earlier-period { text-align: left; }
     }
 
     @media print {
-      :root {
-        --color-text: #000000;
-        --color-muted: #333333;
-        --color-accent: #000000;
-        --color-border: #cccccc;
-      }
-
-      body {
-        font-size: 10.5pt;
-        color: #000;
-        background: #fff;
-      }
-
-      .resume-nav,
-      .resume-footer {
-        display: none;
-      }
-
-      .resume {
-        max-width: none;
-        padding: 0;
-        margin: 0;
-      }
-
-      .resume__header {
-        padding-bottom: 1rem;
-        margin-bottom: 1.5rem;
-      }
-
-      .resume__section {
-        margin-bottom: 1.5rem;
-        page-break-inside: avoid;
-      }
-
-      .resume__name {
-        font-size: 22pt;
-      }
-
-      .resume__title {
-        font-size: 11pt;
-      }
-
-      .resume__section-title {
-        color: #000;
-        font-size: 9pt;
-      }
-
-      .resume__contact a,
-      .resume__item-label a {
-        color: #000;
-        border-bottom: none;
-      }
-
-      a {
-        color: #000;
-      }
-
-      .resume__item,
-      .resume__skill {
-        gap: 1rem;
-      }
-
-      .resume__item-body,
-      .resume__skill-body,
-      .resume__research-meta {
-        color: #222;
-      }
-
-      * {
-        box-shadow: none !important;
-      }
+      :root { --color-text: #000; --color-muted: #333; --color-accent: #000; --color-border: #ccc; }
+      body { font-size: 10pt; }
+      .resume-nav, .resume-footer { display: none; }
+      .resume { max-width: none; padding: 0; }
+      .resume__name { font-size: 20pt; }
+      .resume__section { page-break-inside: avoid; }
+      a { color: #000; }
+      * { box-shadow: none !important; backdrop-filter: none !important; }
     }
   </style>
 </head>
@@ -316,10 +174,13 @@
 
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <nav class="resume-nav" aria-label="Primary">
+  <nav class="resume-nav" aria-label="Site navigation">
     <div class="resume-nav__inner">
       <a class="resume-nav__back" href="https://motethansen.com">← motethansen.com</a>
-      <span class="resume-nav__brand">Resume / CV</span>
+      <div class="resume-nav__actions">
+        <button class="resume-nav__print" onclick="window.print()">Print / PDF</button>
+        <a href="https://linkedin.com/in/michaelmotethansen" target="_blank" rel="noopener" style="font-size:0.85rem;font-weight:500;color:var(--color-muted);">LinkedIn →</a>
+      </div>
     </div>
   </nav>
 
@@ -327,11 +188,11 @@
 
     <header class="resume__header">
       <h1 class="resume__name">Michael Mote Hansen</h1>
-      <p class="resume__title">Entrepreneur · AI Researcher · Innovation Facilitator</p>
+      <p class="resume__headline">Smart City Researcher · Entrepreneur · Innovation Facilitator · 30+ years in technology</p>
       <div class="resume__contact">
-        <span>Nordics</span>
-        <a href="mailto:hansenmichaelmotet@gmail.com">hansenmichaelmotet@gmail.com</a>
-        <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">linkedin.com/in/motethansen</a>
+        <span>Singapore · Nordics</span>
+        <a href="mailto:michael@motethansen.com">michael@motethansen.com</a>
+        <a href="https://linkedin.com/in/michaelmotethansen" target="_blank" rel="noopener">linkedin.com/in/michaelmotethansen</a>
         <a href="https://github.com/motethansen" target="_blank" rel="noopener">github.com/motethansen</a>
         <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID 0000-0001-7645-5958</a>
       </div>
@@ -339,101 +200,229 @@
 
     <section class="resume__section" aria-labelledby="summary-title">
       <h2 id="summary-title" class="resume__section-title">Summary</h2>
-      <p class="resume__summary">Builder and researcher working at the intersection of AI, innovation, and human potential. Founder of multiple ventures across consumer AI, urban tech, and facilitation. Research focus on AI adoption, innovation management, and digital transformation.</p>
+      <p class="resume__summary">Sustainable Smart City researcher and technology strategist with over 30 years of experience across public and private sectors in Europe, Asia, and beyond. Entrepreneur with hands-on design thinking, engineering, and digital transformation skills. Currently Partner at ReF.Team in Singapore, Adjunct Lecturer at James Cook University, and PhD candidate at Thammasat University researching citizen engagement and value propositions in Smart City projects.</p>
     </section>
 
-    <section class="resume__section" aria-labelledby="ventures-title">
-      <h2 id="ventures-title" class="resume__section-title">Ventures &amp; Projects</h2>
-      <ul class="resume__list">
-        <li class="resume__item">
-          <div class="resume__item-label">
-            <a href="https://winedragons.asia" target="_blank" rel="noopener">Wine Dragons</a>
+    <section class="resume__section" aria-labelledby="exp-title">
+      <h2 id="exp-title" class="resume__section-title">Experience</h2>
+      <div class="resume__exp-list">
+
+        <div class="resume__exp">
+          <div class="resume__exp-header">
+            <span class="resume__exp-org">ReF.Team</span>
+            <span class="resume__exp-period">Sep 2023 – Present · Singapore</span>
           </div>
-          <div class="resume__item-body">AI-powered wine discovery platform for Asia. <em>winedragons.asia</em></div>
-        </li>
-        <li class="resume__item">
-          <div class="resume__item-label">
-            <a href="https://urbanlife.works" target="_blank" rel="noopener">UrbanLife Works</a>
+          <div class="resume__exp-role">Partner</div>
+          <div class="resume__exp-body">Advisory engagement for businesses and research organisations. Provides innovation tools and workshops — including AI awareness programmes and design thinking facilitation — to help clients reach their next competitive level.</div>
+        </div>
+
+        <div class="resume__exp">
+          <div class="resume__exp-header">
+            <span class="resume__exp-org">James Cook University Singapore</span>
+            <span class="resume__exp-period">Mar 2018 – Present · Singapore</span>
           </div>
-          <div class="resume__item-body">Urban innovation and smart city platform — mobility, sustainability, and the future of cities. <em>urbanlife.works</em></div>
-        </li>
-        <li class="resume__item">
-          <div class="resume__item-label">
-            <a href="https://ref.team" target="_blank" rel="noopener">ref.team</a>
+          <div class="resume__exp-role">Adjunct Lecturer — Design Thinking, Lean UX, SCRUM, Entrepreneurship</div>
+          <div class="resume__exp-body">
+            <ul>
+              <li>Lectures in Design Thinking, Lean UX, GV Design Sprint, and SCRUM for Agile project management.</li>
+              <li>Subjects include Collective Intelligence, Semantic Web, Entrepreneurship, Network Security, and E-business Technologies.</li>
+              <li>Mentors students in software, cloud, and lean start-up activities.</li>
+            </ul>
           </div>
-          <div class="resume__item-body">Innovation facilitation and AI awareness programmes. <em>ref.team</em></div>
-        </li>
-        <li class="resume__item">
-          <div class="resume__item-label">
-            <a href="https://github.com/motethansen/distributed-infra" target="_blank" rel="noopener">Distributed Agent Stack</a>
+        </div>
+
+        <div class="resume__exp">
+          <div class="resume__exp-header">
+            <span class="resume__exp-org">VizNeo</span>
+            <span class="resume__exp-period">Feb 2016 – Present · Singapore</span>
           </div>
-          <div class="resume__item-body">Multi-machine AI orchestration with Claude, Gemini, and Codex across a Tailscale mesh. <em>github.com/motethansen/distributed-infra</em></div>
-        </li>
-      </ul>
+          <div class="resume__exp-role">Principal Consultant (Oct 2021–Present) · Digital Transformation Consultant (Feb 2016–Sep 2021)</div>
+          <div class="resume__exp-body">
+            <ul>
+              <li>Currently leading Innovation advisory, PMO, and Technology strategy for a Smart Venue — vendor evaluation, data-centric strategy, and community engagement design.</li>
+              <li>Advised 5 businesses on Digital Transformation and DevOps/cloud migration strategy.</li>
+              <li>Delivered a restructuring strategy for a business in Myanmar with a projected 35% improvement.</li>
+              <li>Mentored approximately 110 entrepreneurs across Southeast Asia.</li>
+              <li>Authored and delivered a 3-week SCRUM training programme at SMU Singapore.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="resume__exp">
+          <div class="resume__exp-header">
+            <span class="resume__exp-org">Thammasat University</span>
+            <span class="resume__exp-period">Jan 2020 – Jun 2025 · Bangkok</span>
+          </div>
+          <div class="resume__exp-role">PhD Researcher — Smart City Innovation</div>
+          <div class="resume__exp-body">
+            <ul>
+              <li>Research on Smart City projects in Singapore — engaged Smart Nation team and suppliers, evaluated citizen perceptions and value propositions through surveys and interviews.</li>
+              <li>Research on Smart City projects in Thailand — citizen participation, collaboration flow with government, IoT and Digital Payment innovation.</li>
+              <li>Methods: Design Thinking, Lean UX, Data Science analytics, Python, statistical packages.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="resume__exp">
+          <div class="resume__exp-header">
+            <span class="resume__exp-org">WineDragons</span>
+            <span class="resume__exp-period">Apr 2017 – Present · Singapore</span>
+          </div>
+          <div class="resume__exp-role">Founder</div>
+          <div class="resume__exp-body">Wine community platform for Asia — pairing producers, sommeliers, and curious drinkers. Building a Sommelier rule engine for personalised wine recommendations. <a href="https://winedragons.asia" target="_blank" rel="noopener">winedragons.asia</a></div>
+        </div>
+
+        <div class="resume__exp">
+          <div class="resume__exp-header">
+            <span class="resume__exp-org">Pitney Bowes</span>
+            <span class="resume__exp-period">Sep 2013 – Dec 2015 · Singapore / Japan</span>
+          </div>
+          <div class="resume__exp-role">Senior Solutions Architect · Regional Product Manager (Japan)</div>
+          <div class="resume__exp-body">
+            <ul>
+              <li>Managed pricing, product launch, solution innovation, and pre-sales planning across 5 countries in Asia.</li>
+              <li>Directed 3 teams of 4–15 staff in business development, presales, and software development across ASEAN.</li>
+              <li>Reduced operational costs by 60% through process optimisation.</li>
+              <li>Led internal innovation team producing two proofs of concept with 40% reduction in manufacturing cost.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="resume__exp">
+          <div class="resume__exp-header">
+            <span class="resume__exp-org">SWTEAMS LTD</span>
+            <span class="resume__exp-period">Aug 2008 – Sep 2011 · Mauritius</span>
+          </div>
+          <div class="resume__exp-role">Principal Consultant · Executive Managing Director</div>
+          <div class="resume__exp-body">Grew the company to 30 staff. Key deliveries: Business Process Management solution for Tourism Authority of Mauritius (reducing license processing from 3 months to 3 weeks); green appliance rebate platform for Sustainability Victoria, Australia.</div>
+        </div>
+
+        <div class="resume__exp">
+          <div class="resume__exp-header">
+            <span class="resume__exp-org">M-ITC LTD</span>
+            <span class="resume__exp-period">Jul 2004 – Aug 2008 · Denmark</span>
+          </div>
+          <div class="resume__exp-role">Founder · Executive Managing Director</div>
+          <div class="resume__exp-body">Built an IT consulting firm with up to 30 employees, focused on public sector in Denmark. Key clients: Copenhagen Business School (student management solution), Danish Commerce and Companies Agency (digital signature module for government portal).</div>
+        </div>
+
+      </div>
     </section>
 
-    <section class="resume__section" aria-labelledby="skills-title">
-      <h2 id="skills-title" class="resume__section-title">Skills &amp; Expertise</h2>
-      <div class="resume__skills">
-        <div class="resume__skill">
-          <div class="resume__skill-label">AI &amp; ML</div>
-          <div class="resume__skill-body">Claude, Gemini, LLM orchestration, agent systems</div>
+    <section class="resume__section" aria-labelledby="earlier-title">
+      <h2 id="earlier-title" class="resume__section-title">Earlier Career</h2>
+      <div class="resume__earlier">
+        <div class="resume__earlier-row">
+          <div><span class="resume__earlier-org">IT Practice</span><br><span class="resume__earlier-role">Senior IT Consultant — global container pricing solution for Maersk</span></div>
+          <div class="resume__earlier-period">2002 – 2004</div>
         </div>
-        <div class="resume__skill">
-          <div class="resume__skill-label">Mobile</div>
-          <div class="resume__skill-body">iOS (Swift, Xcode), Android (Kotlin, Gradle), Flutter</div>
+        <div class="resume__earlier-row">
+          <div><span class="resume__earlier-org">Viscon A/S</span><br><span class="resume__earlier-role">Senior Software Engineering Consultant — AI-based interactive education platform for military (WEU)</span></div>
+          <div class="resume__earlier-period">2001 – 2002</div>
         </div>
-        <div class="resume__skill">
-          <div class="resume__skill-label">Backend</div>
-          <div class="resume__skill-body">Python, Node.js, FastAPI, Docker</div>
+        <div class="resume__earlier-row">
+          <div><span class="resume__earlier-org">VIGILANTe / Neupart</span><br><span class="resume__earlier-role">Cyber Security Consultant — penetration testing and vulnerability tooling</span></div>
+          <div class="resume__earlier-period">2000 – 2001</div>
         </div>
-        <div class="resume__skill">
-          <div class="resume__skill-label">Infrastructure</div>
-          <div class="resume__skill-body">Cloudflare (Pages, Workers, KV), Tailscale, SQLite</div>
+        <div class="resume__earlier-row">
+          <div><span class="resume__earlier-org">DCDM / Accenture</span><br><span class="resume__earlier-role">IT Consultant — OpenTV platform, financial and hotel sector projects (Mauritius)</span></div>
+          <div class="resume__earlier-period">1999 – 2000</div>
         </div>
-        <div class="resume__skill">
-          <div class="resume__skill-label">Research</div>
-          <div class="resume__skill-body">Innovation management, technology adoption, digital transformation</div>
+        <div class="resume__earlier-row">
+          <div><span class="resume__earlier-org">CRI A/S · Motorola · Andersen Consulting</span><br><span class="resume__earlier-role">System Engineer — defence, air traffic control, banking, satellite TV systems</span></div>
+          <div class="resume__earlier-period">1995 – 2001</div>
         </div>
-        <div class="resume__skill">
-          <div class="resume__skill-label">Facilitation</div>
-          <div class="resume__skill-body">Design thinking, AI awareness workshops, innovation sprints</div>
+        <div class="resume__earlier-row">
+          <div><span class="resume__earlier-org">Norand A/S</span><br><span class="resume__earlier-role">Software Developer — one of the first handheld touchscreen computers (route planning, invoicing)</span></div>
+          <div class="resume__earlier-period">1994</div>
+        </div>
+        <div class="resume__earlier-row">
+          <div><span class="resume__earlier-org">Pipetronix Inc.</span><br><span class="resume__earlier-role">R&D Engineer — magnetic field sensors for Oil &amp; Gas pipeline corrosion detection (Toronto)</span></div>
+          <div class="resume__earlier-period">1993 – 1994</div>
+        </div>
+        <div class="resume__earlier-row">
+          <div><span class="resume__earlier-org">University of Copenhagen · Niels Bohr Institute</span><br><span class="resume__earlier-role">Research Assistant — particle measurement modules; installation at CERN, Switzerland</span></div>
+          <div class="resume__earlier-period">1988 – 1989</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="resume__section" aria-labelledby="edu-title">
+      <h2 id="edu-title" class="resume__section-title">Education</h2>
+      <div class="resume__edu-list">
+        <div class="resume__edu">
+          <div class="resume__edu-header">
+            <span class="resume__edu-org">Thammasat University, Thailand</span>
+            <span class="resume__edu-period">2020 – 2025</span>
+          </div>
+          <div class="resume__edu-degree">Doctor of Philosophy (PhD) — Integrated Science · Smart City innovation, citizen engagement, digital transformation</div>
+        </div>
+        <div class="resume__edu">
+          <div class="resume__edu-header">
+            <span class="resume__edu-org">James Cook University Singapore</span>
+            <span class="resume__edu-period">2015 – 2016</span>
+          </div>
+          <div class="resume__edu-degree">Master of Business Administration (MBA)</div>
+        </div>
+        <div class="resume__edu">
+          <div class="resume__edu-header">
+            <span class="resume__edu-org">DTU — Technical University of Denmark</span>
+          </div>
+          <div class="resume__edu-degree">BSc. Electrical Engineering</div>
         </div>
       </div>
     </section>
 
     <section class="resume__section" aria-labelledby="research-title">
-      <h2 id="research-title" class="resume__section-title">Research</h2>
-      <div class="resume__research-meta">
-        <p><strong>ORCID:</strong> <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">0000-0001-7645-5958</a></p>
-        <p><strong>Interests:</strong> AI adoption, innovation management, digital transformation</p>
-        <p><strong>Publications:</strong> <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">Full publication list on ORCID →</a></p>
+      <h2 id="research-title" class="resume__section-title">Research &amp; Publications</h2>
+      <div class="resume__research-meta" style="font-size:0.9rem;color:var(--color-muted);line-height:1.65;margin-bottom:1.25rem;">
+        <p><strong style="color:var(--color-text);">Focus:</strong> Smart City innovation · citizen engagement · digital transformation · IoT value propositions</p>
+        <p><strong style="color:var(--color-text);">ORCID:</strong> <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">0000-0001-7645-5958</a></p>
+      </div>
+      <div class="resume__pubs">
+        <div class="resume__pub">Energy conservation through smart homes in a smart city: A lesson for Singapore households</div>
+        <div class="resume__pub">How can data contribute to Smart City innovation: a study from Thailand's Smart City initiatives</div>
+        <div class="resume__pub">Traffy Fondue: a smart city citizen engagement</div>
+        <div class="resume__pub">TraceTogether contact tracing: a Smart Nation innovation</div>
+        <div class="resume__pub">Smart city innovation through citizens inclusion</div>
       </div>
     </section>
 
-    <section class="resume__section" aria-labelledby="writing-title">
-      <h2 id="writing-title" class="resume__section-title">Writing</h2>
-      <ul class="resume__list">
-        <li class="resume__item">
-          <div class="resume__item-label">
-            <a href="https://urbanlifeworks.substack.com/" target="_blank" rel="noopener">Substack — Urban AI</a>
-          </div>
-          <div class="resume__item-body">Essays on urban innovation, AI in cities, and the future of work. <em>urbanlifeworks.substack.com</em></div>
-        </li>
-        <li class="resume__item">
-          <div class="resume__item-label">
-            <a href="https://medium.com/@motethansen" target="_blank" rel="noopener">Medium — @motethansen</a>
-          </div>
-          <div class="resume__item-body">Notes on AI, organisations, and the practice of building. <em>medium.com/@motethansen</em></div>
-        </li>
-      </ul>
+    <section class="resume__section" aria-labelledby="skills-title">
+      <h2 id="skills-title" class="resume__section-title">Skills &amp; Expertise</h2>
+      <div class="resume__skills">
+        <span class="resume__skill-label">Innovation</span>
+        <span class="resume__skill-value">Design Thinking, Lean UX, GV Design Sprints, SCRUM, facilitation</span>
+        <span class="resume__skill-label">AI &amp; Smart City</span>
+        <span class="resume__skill-value">LLM orchestration, agent systems, IoT, digital twins, data analytics</span>
+        <span class="resume__skill-label">Technology</span>
+        <span class="resume__skill-value">Python, Node.js, cloud architecture, DevOps, mobile (iOS/Android)</span>
+        <span class="resume__skill-label">Business</span>
+        <span class="resume__skill-value">Strategic vision, digital transformation, C-level advisory, PMO</span>
+        <span class="resume__skill-label">Research</span>
+        <span class="resume__skill-value">Surveys, quantitative methods, citizen engagement, data science</span>
+      </div>
+    </section>
+
+    <section class="resume__section" aria-labelledby="lang-title">
+      <h2 id="lang-title" class="resume__section-title">Languages &amp; Certifications</h2>
+      <div class="resume__meta">
+        <div class="resume__meta-row">
+          <span class="resume__meta-label">Languages</span>
+          <span class="resume__meta-value">Danish (Native) · English (Full Professional) · French (Full Professional)</span>
+        </div>
+        <div class="resume__meta-row">
+          <span class="resume__meta-label">Certifications</span>
+          <span class="resume__meta-value">Quantitative Methods · Greening the Economy: Sustainable Cities · Power BI · Smarter Cities: Using Data to Drive Urban Innovation · Introduction to Digital Twins</span>
+        </div>
+      </div>
     </section>
 
   </main>
 
   <footer class="resume-footer">
     <span>&copy; <time datetime="2026">2026</time> Michael Mote Hansen</span>
-    <span><a href="https://motethansen.com">motethansen.com</a></span>
+    <span><a href="https://motethansen.com">motethansen.com</a> · <a href="https://linkedin.com/in/michaelmotethansen" target="_blank" rel="noopener">LinkedIn</a></span>
   </footer>
 
 </body>
