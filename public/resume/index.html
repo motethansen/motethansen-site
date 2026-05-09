@@ -158,10 +158,57 @@
       .resume__earlier-period { text-align: left; }
     }
 
+    /* Contact form */
+    .resume__contact-lede {
+      font-size: 0.975rem; color: var(--color-text-muted);
+      margin-bottom: 1.75rem; line-height: 1.6;
+    }
+    .resume__form { display: flex; flex-direction: column; gap: 1rem; max-width: 640px; }
+    .resume__form-row--2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .resume__form-field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .resume__form-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--color-text-soft);
+    }
+    .resume__form-input {
+      padding: 0.75rem 0.9rem; font-size: 0.95rem; font-family: inherit;
+      color: var(--color-text); background: var(--color-bg-card);
+      border: 1px solid var(--color-border); border-radius: 8px;
+      outline: none; transition: border-color 150ms, box-shadow 150ms;
+      -webkit-appearance: none;
+    }
+    .resume__form-input::placeholder { color: var(--color-text-soft); }
+    .resume__form-input:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(123,97,255,0.15);
+    }
+    .resume__form-textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+    .resume__form-footer { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .resume__form-btn {
+      padding: 0.75rem 1.4rem; font-size: 0.9rem; font-weight: 600;
+      font-family: inherit; border: none; border-radius: 8px; cursor: pointer;
+      background: linear-gradient(135deg, var(--color-accent) 0%, #5b3fd4 100%);
+      color: #fff; box-shadow: 0 0 16px rgba(123,97,255,0.3);
+      transition: opacity 150ms, transform 150ms;
+    }
+    .resume__form-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .resume__form-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .resume__form-status { font-size: 0.875rem; font-weight: 500; }
+    .resume__form-status--ok  { color: #2dd4bf; }
+    .resume__form-status--err { color: #f87171; }
+
+    @media (max-width: 640px) {
+      .resume { padding: 2rem var(--gutter) 3rem; }
+      .resume__skills, .resume__meta-row { grid-template-columns: 1fr; gap: 0.2rem; }
+      .resume__earlier-row { grid-template-columns: 1fr; }
+      .resume__earlier-period { text-align: left; }
+      .resume__form-row--2col { grid-template-columns: 1fr; }
+    }
+
     @media print {
       :root { --color-text: #000; --color-muted: #333; --color-accent: #000; --color-border: #ccc; }
       body { font-size: 10pt; }
-      .resume-nav, .resume-footer { display: none; }
+      .resume-nav, .resume-footer, .resume__contact-section { display: none; }
       .resume { max-width: none; padding: 0; }
       .resume__name { font-size: 20pt; }
       .resume__section { page-break-inside: avoid; }
@@ -191,8 +238,8 @@
       <p class="resume__headline">Smart City Researcher · Entrepreneur · Innovation Facilitator · 30+ years in technology</p>
       <div class="resume__contact">
         <span>Singapore · Nordics</span>
-        <a href="mailto:michael@motethansen.com">michael@motethansen.com</a>
-        <a href="https://linkedin.com/in/michaelmotethansen" target="_blank" rel="noopener">linkedin.com/in/michaelmotethansen</a>
+        <a href="https://motethansen.com#contact">motethansen.com</a>
+        <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">linkedin.com/in/motethansen</a>
         <a href="https://github.com/motethansen" target="_blank" rel="noopener">github.com/motethansen</a>
         <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID 0000-0001-7645-5958</a>
       </div>
@@ -418,6 +465,32 @@
       </div>
     </section>
 
+    <section class="resume__section resume__contact-section" aria-labelledby="contact-title">
+      <h2 id="contact-title" class="resume__section-title">Get in touch</h2>
+      <p class="resume__contact-lede">Open to research collaborations, advisory roles, and consulting engagements.</p>
+
+      <form class="resume__form" id="resume-contact-form" novalidate>
+        <div class="resume__form-row resume__form-row--2col">
+          <div class="resume__form-field">
+            <label class="resume__form-label" for="rc-name">Name</label>
+            <input class="resume__form-input" type="text" id="rc-name" name="name" placeholder="Your name" required autocomplete="name">
+          </div>
+          <div class="resume__form-field">
+            <label class="resume__form-label" for="rc-email">Email</label>
+            <input class="resume__form-input" type="email" id="rc-email" name="email" placeholder="your@email.com" required autocomplete="email">
+          </div>
+        </div>
+        <div class="resume__form-field">
+          <label class="resume__form-label" for="rc-message">Message</label>
+          <textarea class="resume__form-input resume__form-textarea" id="rc-message" name="message" rows="4" placeholder="What would you like to discuss?" required></textarea>
+        </div>
+        <div class="resume__form-footer">
+          <button class="resume__form-btn" type="submit" id="rc-submit">Send message</button>
+          <span class="resume__form-status" id="rc-status" aria-live="polite"></span>
+        </div>
+      </form>
+    </section>
+
   </main>
 
   <footer class="resume-footer">
@@ -425,5 +498,34 @@
     <span><a href="https://motethansen.com">motethansen.com</a> · <a href="https://linkedin.com/in/michaelmotethansen" target="_blank" rel="noopener">LinkedIn</a></span>
   </footer>
 
+  <script>
+    const form   = document.getElementById('resume-contact-form');
+    const status = document.getElementById('rc-status');
+    const btn    = document.getElementById('rc-submit');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      status.textContent = '';
+      status.className = 'resume__form-status';
+
+      try {
+        const res  = await fetch('/api/contact', { method: 'POST', body: new FormData(form) });
+        const data = await res.json();
+        if (data.success) {
+          status.textContent = "Message sent — I'll be in touch soon.";
+          status.className = 'resume__form-status resume__form-status--ok';
+          form.reset();
+        } else throw new Error();
+      } catch {
+        status.textContent = 'Something went wrong. Please try again.';
+        status.className = 'resume__form-status resume__form-status--err';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send message';
+      }
+    });
+  </script>
 </body>
 </html>
