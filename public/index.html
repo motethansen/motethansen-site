@@ -151,22 +151,34 @@
         <header class="section__head">
           <p class="section__eyebrow">Writing</p>
           <h2 id="writing-title" class="section__title">Writing.</h2>
-          <p class="section__lede">Essays and notes on AI, urban innovation, and the future of organisations — published on Substack and Medium.</p>
+          <p class="section__lede">Essays and notes on AI, urban innovation, and the future of organisations — published across Substack and Medium.</p>
         </header>
 
-        <div class="meta-row">
-          <a class="meta-row__link" href="https://urbanlifeworks.substack.com/" target="_blank" rel="noopener">
-            <span class="meta-row__label">Substack</span>
-            <span class="meta-row__value">Urban AI <span aria-hidden="true">→</span></span>
+        <div class="pub-links">
+          <a class="pub-link" href="https://urbanlifeworks.substack.com/" target="_blank" rel="noopener">
+            <span class="pub-link__platform pub-link__platform--substack">Substack</span>
+            <span class="pub-link__name">Urban Life Works</span>
           </a>
-          <a class="meta-row__link" href="https://medium.com/@motethansen" target="_blank" rel="noopener">
-            <span class="meta-row__label">Medium</span>
-            <span class="meta-row__value">@motethansen <span aria-hidden="true">→</span></span>
+          <a class="pub-link" href="https://vizneoacademy.substack.com/" target="_blank" rel="noopener">
+            <span class="pub-link__platform pub-link__platform--substack">Substack</span>
+            <span class="pub-link__name">Vizneo Academy</span>
+          </a>
+          <a class="pub-link" href="https://medium.com/urban-life-works" target="_blank" rel="noopener">
+            <span class="pub-link__platform pub-link__platform--medium">Medium</span>
+            <span class="pub-link__name">Urban Life Works</span>
+          </a>
+          <a class="pub-link" href="https://medium.com/vizneo-academy" target="_blank" rel="noopener">
+            <span class="pub-link__platform pub-link__platform--medium">Medium</span>
+            <span class="pub-link__name">Vizneo Academy</span>
+          </a>
+          <a class="pub-link" href="https://motethansen.medium.com" target="_blank" rel="noopener">
+            <span class="pub-link__platform pub-link__platform--medium">Medium</span>
+            <span class="pub-link__name">Michael Motet Hansen</span>
           </a>
         </div>
 
-        <div id="writing-feed" class="placeholder">
-          <p class="placeholder__text">Latest posts loading…</p>
+        <div id="writing-feed" class="writing-grid">
+          <p class="placeholder__text">Loading latest posts…</p>
         </div>
       </div>
     </section>
@@ -251,6 +263,51 @@
       </ul>
     </div>
   </footer>
+
+  <script>
+    // ── Writing feed ──────────────────────────────────
+    (async () => {
+      const grid = document.getElementById('writing-feed');
+      try {
+        const res  = await fetch('/api/writing');
+        const data = await res.json();
+        const posts = data.posts || [];
+        if (!posts.length) {
+          grid.innerHTML = '<p class="placeholder__text">No posts found — check back soon.</p>';
+          return;
+        }
+        grid.innerHTML = posts.map(p => {
+          const date = p.date ? new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+          const platformClass = p.platform === 'Substack' ? 'badge--substack' : 'badge--medium';
+          const img = p.image
+            ? `<img class="wcard__img" src="${escAttr(p.image)}" alt="" loading="lazy">`
+            : `<div class="wcard__img wcard__img--blank"></div>`;
+          return `
+            <a class="wcard" href="${escAttr(p.url)}" target="_blank" rel="noopener">
+              ${img}
+              <div class="wcard__body">
+                <div class="wcard__meta">
+                  <span class="badge ${platformClass}">${p.platform}</span>
+                  <span class="wcard__source">${escHtml(p.source)}</span>
+                </div>
+                <h3 class="wcard__title">${escHtml(p.title)}</h3>
+                <p class="wcard__desc">${escHtml(p.description)}</p>
+                <span class="wcard__date">${date}</span>
+              </div>
+            </a>`;
+        }).join('');
+      } catch (e) {
+        grid.innerHTML = '<p class="placeholder__text">Could not load posts.</p>';
+      }
+    })();
+
+    function escHtml(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function escAttr(s) {
+      return String(s||'').replace(/"/g,'&quot;');
+    }
+  </script>
 
   <script>
     const form = document.getElementById('contact-form');

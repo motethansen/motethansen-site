@@ -1,183 +1,183 @@
-const FEEDS = [
-  { source: "substack", url: "https://urbanlifeworks.substack.com/feed" },
-  { source: "medium", url: "https://medium.com/feed/@motethansen" },
+/**
+ * GET /api/writing
+ * Aggregates RSS feeds from Substack and Medium publications.
+ * Returns top 9 posts sorted by date desc, with images.
+ * Cached in KV for 6 hours if SITE_KV binding is configured.
+ */
+
+const CACHE_KEY = "writing-feed-v3";
+const CACHE_TTL = 60 * 60 * 6; // 6 hours
+
+const SOURCES = [
+  {
+    id: "ulw-substack",
+    name: "Urban Life Works",
+    platform: "Substack",
+    feed: "https://urbanlifeworks.substack.com/feed",
+    link: "https://urbanlifeworks.substack.com/",
+  },
+  {
+    id: "va-substack",
+    name: "Vizneo Academy",
+    platform: "Substack",
+    feed: "https://vizneoacademy.substack.com/feed",
+    link: "https://vizneoacademy.substack.com/",
+  },
+  {
+    id: "ulw-medium",
+    name: "Urban Life Works",
+    platform: "Medium",
+    feed: "https://medium.com/feed/urban-life-works",
+    link: "https://medium.com/urban-life-works",
+  },
+  {
+    id: "va-medium",
+    name: "Vizneo Academy",
+    platform: "Medium",
+    feed: "https://medium.com/feed/vizneo-academy",
+    link: "https://medium.com/vizneo-academy",
+  },
+  {
+    id: "personal-medium",
+    name: "Michael Motet Hansen",
+    platform: "Medium",
+    feed: "https://medium.com/feed/@motethansen",
+    link: "https://motethansen.medium.com",
+  },
 ];
 
-const CACHE_KEY = "writing-feed";
-const CACHE_TTL_SECONDS = 21600;
-const MAX_ITEMS = 10;
-const EXCERPT_MAX = 200;
+export async function onRequestGet({ env }) {
+  // Try KV cache first
+  if (env.SITE_KV) {
+    try {
+      const cached = await env.SITE_KV.get(CACHE_KEY);
+      if (cached) return jsonResponse({ posts: JSON.parse(cached), cached: true });
+    } catch {}
+  }
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+  // Fetch all feeds in parallel, tolerate individual failures
+  const results = await Promise.allSettled(SOURCES.map(fetchFeed));
+
+  const posts = [];
+  for (const r of results) {
+    if (r.status === "fulfilled") posts.push(...r.value);
+    else console.warn("Feed failed:", r.reason?.message);
+  }
+
+  // Sort newest first, deduplicate by URL, take top 9
+  posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const seen = new Set();
+  const top = posts.filter(p => {
+    if (seen.has(p.url)) return false;
+    seen.add(p.url);
+    return true;
+  }).slice(0, 9);
+
+  // Write to KV cache
+  if (env.SITE_KV) {
+    try {
+      await env.SITE_KV.put(CACHE_KEY, JSON.stringify(top), { expirationTtl: CACHE_TTL });
+    } catch {}
+  }
+
+  return jsonResponse({ posts: top });
+}
+
+export async function onRequestOptions() {
+  return new Response(null, { headers: corsHeaders() });
+}
+
+// ── Feed fetching ─────────────────────────────────────
+
+async function fetchFeed(source) {
+  const res = await fetch(source.feed, {
+    headers: { "User-Agent": "motethansen.com/1.0 RSS aggregator" },
+    cf: { cacheTtl: 3600, cacheEverything: true },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${source.id}`);
+  const xml = await res.text();
+  return parseRSS(xml, source);
+}
+
+// ── RSS parser ────────────────────────────────────────
+
+function parseRSS(xml, source) {
+  const itemMatches = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
+  return itemMatches.slice(0, 5).map(m => parseItem(m[1], source)).filter(Boolean);
+}
+
+function parseItem(item, source) {
+  const title = stripHtml(extractTag(item, "title"));
+  const url   = extractUrl(item);
+  const date  = extractTag(item, "pubDate") || extractTag(item, "dc:date") || "";
+  const image = extractImage(item);
+  const desc  = stripHtml(
+    extractTag(item, "content:encoded") || extractTag(item, "description") || ""
+  ).slice(0, 180).trim();
+
+  if (!title || !url) return null;
+
+  return { title, url, date, image, description: desc,
+           source: source.name, platform: source.platform,
+           sourceLink: source.link, sourceId: source.id };
+}
+
+// ── XML helpers ───────────────────────────────────────
+
+function extractTag(xml, tag) {
+  const cd = xml.match(new RegExp(`<${tag}[^>]*>\\s*<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>`, "i"));
+  if (cd) return cd[1].trim();
+  const pl = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
+  return pl ? pl[1].trim() : "";
+}
+
+function extractUrl(item) {
+  const lc = item.match(/<link>\s*<!\[CDATA\[(.*?)\]\]>/i);
+  if (lc) return lc[1].trim();
+  const lp = item.match(/<link>([^<\s][^<]*)<\/link>/i);
+  if (lp) return lp[1].trim();
+  const g = item.match(/<guid[^>]*>([^<]+)<\/guid>/i);
+  if (g && g[1].startsWith("http")) return g[1].trim();
+  return "";
+}
+
+function extractImage(item) {
+  const mc = item.match(/<media:content[^>]+url="([^"]+)"/i);
+  if (mc && isImage(mc[1])) return mc[1];
+  const en = item.match(/<enclosure[^>]+url="([^"]+)"/i);
+  if (en && isImage(en[1])) return en[1];
+  const content = extractTag(item, "content:encoded") || extractTag(item, "description");
+  const img = content.match(/<img[^>]+src="([^"]+)"/i);
+  if (img && isImage(img[1]) && !img[1].includes("emoji") && !img[1].includes("stat.")) {
+    return img[1];
+  }
+  return null;
+}
+
+function isImage(url) {
+  return /\.(jpe?g|png|webp|gif|avif)/i.test(url)
+    || url.includes("substackcdn")
+    || url.includes("miro.medium")
+    || url.includes("cdn-images");
+}
+
+function stripHtml(html) {
+  return html
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#?\w+;/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "public, max-age=600",
-      ...CORS_HEADERS,
-    },
+    headers: { "Content-Type": "application/json",
+               "Cache-Control": "public, max-age=3600", ...corsHeaders() },
   });
 }
 
-function decodeEntities(str) {
-  if (!str) return "";
-  return str
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&#(\d+);/g, (_, n) => {
-      const code = parseInt(n, 10);
-      return Number.isFinite(code) ? String.fromCharCode(code) : "";
-    })
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => {
-      const code = parseInt(n, 16);
-      return Number.isFinite(code) ? String.fromCharCode(code) : "";
-    })
-    .replace(/&amp;/g, "&");
-}
-
-function stripCdata(str) {
-  if (!str) return "";
-  const m = str.match(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/);
-  return m ? m[1] : str;
-}
-
-function extractTag(itemXml, tagName) {
-  const re = new RegExp(`<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tagName}>`, "i");
-  const match = itemXml.match(re);
-  if (!match) return "";
-  return decodeEntities(stripCdata(match[1])).trim();
-}
-
-function stripHtml(str) {
-  if (!str) return "";
-  return str.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-}
-
-function truncate(str, max) {
-  if (!str) return "";
-  if (str.length <= max) return str;
-  return str.slice(0, max).trimEnd();
-}
-
-function parseDate(str) {
-  if (!str) return null;
-  const d = new Date(str);
-  if (Number.isNaN(d.getTime())) return null;
-  return d;
-}
-
-function parseRss(xml, source) {
-  const items = [];
-  if (!xml) return items;
-  const itemRegex = /<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi;
-  let match;
-  while ((match = itemRegex.exec(xml)) !== null) {
-    const itemXml = match[1];
-    const title = extractTag(itemXml, "title");
-    const link = extractTag(itemXml, "link");
-    const pubDateRaw = extractTag(itemXml, "pubDate");
-    const description = extractTag(itemXml, "description");
-
-    if (!title && !link) continue;
-
-    const date = parseDate(pubDateRaw);
-    const excerpt = truncate(stripHtml(description), EXCERPT_MAX);
-
-    items.push({
-      title,
-      url: link,
-      date: date ? date.toISOString() : null,
-      excerpt,
-      source,
-    });
-  }
-  return items;
-}
-
-async function fetchFeed(feed) {
-  const res = await fetch(feed.url, {
-    headers: {
-      Accept: "application/rss+xml, application/xml, text/xml; q=0.9, */*; q=0.8",
-      "User-Agent": "motethansen-site/1.0 (+https://motethansen.com)",
-    },
-    cf: { cacheTtl: 300 },
-  });
-  if (!res.ok) throw new Error(`${feed.source} responded ${res.status}`);
-  const xml = await res.text();
-  return parseRss(xml, feed.source);
-}
-
-function sortByDateDesc(a, b) {
-  const at = a.date ? Date.parse(a.date) : 0;
-  const bt = b.date ? Date.parse(b.date) : 0;
-  return bt - at;
-}
-
-export async function onRequest(context) {
-  const { request, env } = context;
-
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
-  }
-  if (request.method !== "GET") {
-    return jsonResponse({ error: "method_not_allowed" }, 405);
-  }
-
-  const kv = env && env.SITE_KV;
-
-  try {
-    if (kv) {
-      const cached = await kv.get(CACHE_KEY);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          return jsonResponse({
-            posts: parsed.posts || [],
-            cached: true,
-            updated: parsed.updated,
-          });
-        } catch (_) {
-          // fall through
-        }
-      }
-    }
-
-    const results = await Promise.allSettled(FEEDS.map(fetchFeed));
-    const posts = [];
-    for (const result of results) {
-      if (result.status === "fulfilled" && Array.isArray(result.value)) {
-        posts.push(...result.value);
-      }
-    }
-
-    posts.sort(sortByDateDesc);
-    const top = posts.slice(0, MAX_ITEMS);
-    const updated = new Date().toISOString();
-
-    if (kv && top.length > 0) {
-      try {
-        await kv.put(
-          CACHE_KEY,
-          JSON.stringify({ posts: top, updated }),
-          { expirationTtl: CACHE_TTL_SECONDS },
-        );
-      } catch (_) {
-        // ignore cache failures
-      }
-    }
-
-    return jsonResponse({ posts: top, cached: false, updated });
-  } catch (_) {
-    return jsonResponse({ posts: [], cached: false, updated: new Date().toISOString() }, 200);
-  }
+function corsHeaders() {
+  return { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" };
 }
