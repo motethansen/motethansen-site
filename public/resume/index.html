@@ -3,290 +3,391 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Resume / CV of Michael Motet Hansen — Smart City researcher, entrepreneur, and innovation facilitator with 30+ years in technology and digital transformation.">
+  <meta name="description" content="Resume / CV — Michael Motet Hansen. Smart City researcher, entrepreneur, and innovation facilitator with 30+ years in technology across Europe and Asia.">
   <meta name="author" content="Michael Motet Hansen">
-  <meta name="theme-color" content="#ffffff">
   <meta property="og:title" content="Michael Motet Hansen — Resume / CV">
-  <meta property="og:description" content="Smart City researcher, entrepreneur, and innovation facilitator. Partner at ReF.Team · PhD candidate · Adjunct Lecturer at JCU Singapore.">
-  <meta property="og:type" content="profile">
+  <meta property="og:description" content="Partner at ref.team · PhD researcher · Adjunct Lecturer JCU · 30+ years in tech">
   <meta property="og:url" content="https://michael.motethansen.com">
   <title>Michael Motet Hansen — Resume / CV</title>
-  <link rel="stylesheet" href="/style.css">
-  <style>
-    :root { --resume-max-width: 900px; }
 
-    .resume-nav {
-      position: sticky; top: 0; z-index: 50;
-      background: rgba(255,255,255,0.88);
-      backdrop-filter: saturate(180%) blur(12px);
-      -webkit-backdrop-filter: saturate(180%) blur(12px);
-      border-bottom: 1px solid var(--color-border);
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+  <style>
+    /* ── Reset & base ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0a0a0f;
+      --bg-alt:   #13131e;
+      --bg-card:  #16161f;
+      --text:     #f0f0f8;
+      --muted:    #9898b0;
+      --soft:     #5a5a72;
+      --border:   rgba(255,255,255,0.07);
+      --border-s: rgba(255,255,255,0.12);
+      --accent:   #7b61ff;
+      --accent-h: #9b86ff;
+      --teal:     #2dd4bf;
+      --gold:     #f4b942;
+      --radius:   10px;
+      --max:      860px;
+      --gutter:   1.5rem;
     }
-    .resume-nav__inner {
-      max-width: var(--resume-max-width); margin: 0 auto;
-      padding: 1rem var(--gutter);
+    html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+    body {
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      font-size: 16px; line-height: 1.6;
+    }
+    a { color: var(--accent); text-decoration: none; transition: color 150ms; }
+    a:hover { color: var(--accent-h); }
+    ul { list-style: none; }
+
+    /* ── Nav ──────────────────────────────────────── */
+    .rn {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: saturate(180%) blur(16px);
+      -webkit-backdrop-filter: saturate(180%) blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .rn__inner {
+      max-width: var(--max); margin: 0 auto;
+      padding: 0.9rem var(--gutter);
       display: flex; align-items: center; justify-content: space-between; gap: 1rem;
     }
-    .resume-nav__back { font-size: 0.9rem; font-weight: 500; color: var(--color-muted); }
-    .resume-nav__back:hover { color: var(--color-text); }
-    .resume-nav__actions { display: flex; gap: 1rem; align-items: center; }
-    .resume-nav__print {
-      font-size: 0.85rem; font-weight: 500; color: var(--color-muted);
-      cursor: pointer; border: none; background: none; padding: 0;
+    .rn__back { font-size: 0.875rem; font-weight: 500; color: var(--muted); }
+    .rn__back:hover { color: var(--text); }
+    .rn__actions { display: flex; gap: 1rem; align-items: center; }
+    .rn__btn {
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border-s); background: var(--bg-card);
+      color: var(--muted); padding: 0.45rem 0.9rem; border-radius: 6px;
+      font-family: inherit; transition: color 150ms, border-color 150ms;
     }
-    .resume-nav__print:hover { color: var(--color-accent); }
+    .rn__btn:hover { color: var(--text); border-color: var(--accent); }
+    .rn__li { font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+    .rn__li:hover { color: var(--text); }
 
+    /* ── Hero ─────────────────────────────────────── */
+    .hero {
+      position: relative; overflow: hidden;
+      padding: 5rem var(--gutter) 4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 80% at 80% -10%, rgba(123,97,255,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at -10% 100%, rgba(45,212,191,0.1) 0%, transparent 60%);
+    }
+    .hero::after {
+      content: '';
+      position: absolute; inset: 0; pointer-events: none;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 26px 26px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%);
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%);
+    }
+    .hero__inner { max-width: var(--max); margin: 0 auto; position: relative; z-index: 1; }
+    .hero__eyebrow {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--teal);
+      padding: 0.35rem 0.8rem; border-radius: 999px;
+      border: 1px solid rgba(45,212,191,0.25); background: rgba(45,212,191,0.06);
+      margin-bottom: 1.5rem;
+    }
+    .hero__name {
+      font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 800;
+      letter-spacing: -0.04em; line-height: 1.0; margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero__headline {
+      font-size: clamp(1rem, 2vw, 1.2rem); font-weight: 500;
+      color: var(--accent-h); margin-bottom: 1.5rem; letter-spacing: -0.01em;
+    }
+    .hero__links {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+      font-size: 0.82rem; margin-bottom: 2.5rem;
+    }
+    .hero__link {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      color: var(--muted); padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border); border-radius: 999px; background: var(--bg-card);
+      transition: color 150ms, border-color 150ms;
+    }
+    .hero__link:hover { color: var(--text); border-color: var(--border-s); }
+    .hero__stats {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+    }
+    .stat {
+      padding: 0.75rem 1.25rem; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg-card);
+      display: flex; flex-direction: column; gap: 0.15rem;
+    }
+    .stat__num { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
+    .stat__label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--soft); }
+
+    /* ── Layout ───────────────────────────────────── */
     .resume {
-      max-width: var(--resume-max-width); margin: 0 auto;
+      max-width: var(--max); margin: 0 auto;
       padding: 3.5rem var(--gutter) 5rem;
+      display: flex; flex-direction: column; gap: 3.5rem;
     }
 
-    /* Header */
-    .resume__header {
-      padding-bottom: 2rem; border-bottom: 1px solid var(--color-border); margin-bottom: 2.5rem;
-    }
-    .resume__name {
-      font-size: clamp(2rem, 5vw, 3rem); font-weight: 700;
-      letter-spacing: -0.035em; line-height: 1.05; margin-bottom: 0.4rem;
-    }
-    .resume__headline {
-      font-size: 1.05rem; font-weight: 500; color: var(--color-muted);
-      margin-bottom: 1.25rem; letter-spacing: -0.005em;
-    }
-    .resume__contact {
-      display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem;
-      font-size: 0.875rem; color: var(--color-muted);
-    }
-    .resume__contact a { color: var(--color-muted); border-bottom: 1px solid transparent; transition: color 150ms, border-color 150ms; }
-    .resume__contact a:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
-
-    /* Sections */
-    .resume__section { margin-bottom: 2.75rem; }
-    .resume__section-title {
-      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.12em; color: var(--color-accent);
-      padding-bottom: 0.5rem; margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .resume__summary {
-      font-size: 1rem; line-height: 1.72; color: var(--color-text); max-width: 70ch;
+    /* ── Section ──────────────────────────────────── */
+    .sec__label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.14em; color: var(--accent);
+      padding-bottom: 0.6rem; margin-bottom: 1.75rem;
+      border-bottom: 1px solid var(--border);
     }
 
-    /* Experience items */
-    .resume__exp-list { display: flex; flex-direction: column; gap: 2rem; }
-    .resume__exp {  }
-    .resume__exp-header {
-      display: flex; flex-wrap: wrap; justify-content: space-between;
-      align-items: baseline; gap: 0.25rem 1.5rem; margin-bottom: 0.25rem;
-    }
-    .resume__exp-org {
-      font-size: 0.975rem; font-weight: 700; color: var(--color-text);
-      letter-spacing: -0.01em;
-    }
-    .resume__exp-period {
-      font-size: 0.82rem; font-weight: 500; color: var(--color-muted);
-      white-space: nowrap;
-    }
-    .resume__exp-role {
-      font-size: 0.9rem; font-weight: 500; color: var(--color-muted);
-      margin-bottom: 0.6rem;
-    }
-    .resume__exp-body {
-      font-size: 0.9rem; line-height: 1.65; color: var(--color-muted);
-    }
-    .resume__exp-body ul { list-style: disc; padding-left: 1.25rem; margin-top: 0.4rem; }
-    .resume__exp-body li { margin: 0.3rem 0; }
-
-    /* Earlier career */
-    .resume__earlier {
-      font-size: 0.875rem; line-height: 1.7; color: var(--color-muted);
-    }
-    .resume__earlier-row {
-      display: grid; grid-template-columns: 1fr auto;
-      gap: 0.5rem 2rem; padding: 0.5rem 0;
-      border-bottom: 1px solid var(--color-border);
-      align-items: baseline;
-    }
-    .resume__earlier-row:last-child { border-bottom: none; }
-    .resume__earlier-org { font-weight: 600; color: var(--color-text); }
-    .resume__earlier-period { font-size: 0.8rem; color: var(--color-muted); white-space: nowrap; text-align: right; }
-    .resume__earlier-role { color: var(--color-muted); font-size: 0.85rem; grid-column: 1; }
-
-    /* Education */
-    .resume__edu-list { display: flex; flex-direction: column; gap: 1.5rem; }
-    .resume__edu { }
-    .resume__edu-header {
-      display: flex; flex-wrap: wrap; justify-content: space-between;
-      align-items: baseline; gap: 0.25rem 1.5rem;
-    }
-    .resume__edu-org { font-size: 0.975rem; font-weight: 700; color: var(--color-text); }
-    .resume__edu-period { font-size: 0.82rem; color: var(--color-muted); white-space: nowrap; }
-    .resume__edu-degree { font-size: 0.9rem; color: var(--color-muted); margin-top: 0.2rem; }
-
-    /* Skills grid */
-    .resume__skills {
-      display: grid; grid-template-columns: 160px 1fr;
-      gap: 0.9rem 2rem;
-      font-size: 0.9rem;
-    }
-    .resume__skill-label { font-weight: 600; color: var(--color-text); }
-    .resume__skill-value { color: var(--color-muted); line-height: 1.55; }
-
-    /* Research */
-    .resume__pubs { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; }
-    .resume__pub { font-size: 0.875rem; color: var(--color-muted); line-height: 1.55; padding-left: 1rem; border-left: 2px solid var(--color-border); }
-
-    /* Meta row: languages, certs */
-    .resume__meta { display: flex; flex-direction: column; gap: 0.75rem; }
-    .resume__meta-row { display: grid; grid-template-columns: 160px 1fr; gap: 0.5rem 2rem; font-size: 0.9rem; align-items: baseline; }
-    .resume__meta-label { font-weight: 600; color: var(--color-text); }
-    .resume__meta-value { color: var(--color-muted); line-height: 1.55; }
-
-    /* Footer */
-    .resume-footer {
-      max-width: var(--resume-max-width); margin: 0 auto;
-      padding: 1.5rem var(--gutter) 3rem;
-      border-top: 1px solid var(--color-border);
-      font-size: 0.82rem; color: var(--color-muted);
-      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    /* ── Summary ──────────────────────────────────── */
+    .summary {
+      font-size: 1.05rem; line-height: 1.75; color: var(--muted); max-width: 68ch;
     }
 
-    @media (max-width: 640px) {
-      .resume { padding: 2rem var(--gutter) 3rem; }
-      .resume__skills, .resume__meta-row { grid-template-columns: 1fr; gap: 0.2rem; }
-      .resume__earlier-row { grid-template-columns: 1fr; }
-      .resume__earlier-period { text-align: left; }
+    /* ── Experience timeline ──────────────────────── */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item {
+      display: grid; grid-template-columns: 140px 1fr;
+      gap: 0 2rem; padding: 1.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tl-item:last-child { border-bottom: none; }
+    .tl-period {
+      font-size: 0.78rem; font-weight: 600; color: var(--soft);
+      padding-top: 0.15rem; line-height: 1.4;
+    }
+    .tl-body {}
+    .tl-org {
+      font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;
+      color: var(--text); margin-bottom: 0.15rem;
+    }
+    .tl-role {
+      font-size: 0.875rem; font-weight: 500; color: var(--accent-h);
+      margin-bottom: 0.75rem;
+    }
+    .tl-desc {
+      font-size: 0.9rem; color: var(--muted); line-height: 1.65;
+    }
+    .tl-desc li { position: relative; padding-left: 1rem; margin-bottom: 0.3rem; }
+    .tl-desc li::before { content: '–'; position: absolute; left: 0; color: var(--soft); }
+    .tl-desc a { font-size: inherit; }
+
+    /* ── Earlier career ───────────────────────────── */
+    .earlier { display: flex; flex-direction: column; gap: 0; }
+    .earlier-row {
+      display: grid; grid-template-columns: 1fr 100px;
+      gap: 0.25rem 1.5rem; padding: 0.9rem 0;
+      border-bottom: 1px solid var(--border); align-items: baseline;
+    }
+    .earlier-row:last-child { border-bottom: none; }
+    .earlier-org { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+    .earlier-role { font-size: 0.82rem; color: var(--muted); margin-top: 0.1rem; }
+    .earlier-period { font-size: 0.75rem; color: var(--soft); font-weight: 600; text-align: right; white-space: nowrap; }
+
+    /* ── Education ────────────────────────────────── */
+    .edu-list { display: flex; flex-direction: column; gap: 1.25rem; }
+    .edu-item {
+      padding: 1.25rem 1.5rem; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg-card);
+    }
+    .edu-org { font-size: 0.875rem; font-weight: 700; color: var(--text); margin-bottom: 0.2rem; }
+    .edu-degree { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+    .edu-period { font-size: 0.75rem; color: var(--soft); font-weight: 600; margin-top: 0.35rem; }
+
+    /* ── Research / Pubs ──────────────────────────── */
+    .pubs { display: flex; flex-direction: column; gap: 0.75rem; }
+    .pub {
+      padding: 0.9rem 1.25rem; border-left: 2px solid var(--accent);
+      background: var(--bg-card); border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: 0.875rem; color: var(--muted); line-height: 1.6;
+    }
+    .pub strong { color: var(--text); font-weight: 600; }
+    .orcid-link {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.82rem; font-weight: 600;
+      padding: 0.4rem 0.9rem; border: 1px solid rgba(123,97,255,0.3);
+      border-radius: 999px; background: rgba(123,97,255,0.08); margin-bottom: 1.25rem;
     }
 
-    /* Contact form */
-    .resume__contact-lede {
-      font-size: 0.975rem; color: var(--color-text-muted);
-      margin-bottom: 1.75rem; line-height: 1.6;
+    /* ── Skills ───────────────────────────────────── */
+    .skills-grid { display: flex; flex-direction: column; gap: 1rem; }
+    .skill-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+    .skill-cat {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--soft); min-width: 120px;
     }
-    .resume__form { display: flex; flex-direction: column; gap: 1rem; max-width: 640px; }
-    .resume__form-row--2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .resume__form-field { display: flex; flex-direction: column; gap: 0.35rem; }
-    .resume__form-label {
-      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: var(--color-text-soft);
+    .tag {
+      font-size: 0.78rem; font-weight: 500;
+      padding: 0.25rem 0.65rem; border-radius: 999px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      color: var(--muted);
     }
-    .resume__form-input {
+
+    /* ── Languages & Certs ────────────────────────── */
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .meta-card {
+      padding: 1.25rem 1.5rem; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--bg-card);
+    }
+    .meta-card__label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--accent); margin-bottom: 0.75rem;
+    }
+    .meta-card__value { font-size: 0.875rem; color: var(--muted); line-height: 1.7; }
+
+    /* ── Contact form ─────────────────────────────── */
+    .cf { display: flex; flex-direction: column; gap: 1rem; max-width: 580px; }
+    .cf-lede { font-size: 0.975rem; color: var(--muted); margin-bottom: 0.5rem; line-height: 1.65; }
+    .cf-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .cf-field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .cf-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--soft);
+    }
+    .cf-input {
       padding: 0.75rem 0.9rem; font-size: 0.95rem; font-family: inherit;
-      color: var(--color-text); background: var(--color-bg-card);
-      border: 1px solid var(--color-border); border-radius: 8px;
+      color: var(--text); background: var(--bg-card);
+      border: 1px solid var(--border); border-radius: 8px;
       outline: none; transition: border-color 150ms, box-shadow 150ms;
       -webkit-appearance: none;
     }
-    .resume__form-input::placeholder { color: var(--color-text-soft); }
-    .resume__form-input:focus {
-      border-color: var(--color-accent);
-      box-shadow: 0 0 0 3px rgba(123,97,255,0.15);
-    }
-    .resume__form-textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
-    .resume__form-footer { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .resume__form-btn {
-      padding: 0.75rem 1.4rem; font-size: 0.9rem; font-weight: 600;
+    .cf-input::placeholder { color: var(--soft); }
+    .cf-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(123,97,255,0.15); }
+    .cf-ta { resize: vertical; min-height: 110px; line-height: 1.6; }
+    .cf-footer { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .cf-btn {
+      padding: 0.75rem 1.5rem; font-size: 0.9rem; font-weight: 600;
       font-family: inherit; border: none; border-radius: 8px; cursor: pointer;
-      background: linear-gradient(135deg, var(--color-accent) 0%, #5b3fd4 100%);
+      background: linear-gradient(135deg, var(--accent) 0%, #5b3fd4 100%);
       color: #fff; box-shadow: 0 0 16px rgba(123,97,255,0.3);
       transition: opacity 150ms, transform 150ms;
     }
-    .resume__form-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    .resume__form-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .resume__form-status { font-size: 0.875rem; font-weight: 500; }
-    .resume__form-status--ok  { color: #2dd4bf; }
-    .resume__form-status--err { color: #f87171; }
+    .cf-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .cf-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .cf-status { font-size: 0.875rem; font-weight: 500; }
+    .cf-ok  { color: var(--teal); }
+    .cf-err { color: #f87171; }
 
+    /* ── Footer ───────────────────────────────────── */
+    .rfooter {
+      border-top: 1px solid var(--border); padding: 2rem var(--gutter);
+      max-width: var(--max); margin: 0 auto;
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+      font-size: 0.8rem; color: var(--soft);
+    }
+    .rfooter a { color: var(--soft); }
+    .rfooter a:hover { color: var(--text); }
+
+    /* ── Responsive ───────────────────────────────── */
     @media (max-width: 640px) {
-      .resume { padding: 2rem var(--gutter) 3rem; }
-      .resume__skills, .resume__meta-row { grid-template-columns: 1fr; gap: 0.2rem; }
-      .resume__earlier-row { grid-template-columns: 1fr; }
-      .resume__earlier-period { text-align: left; }
-      .resume__form-row--2col { grid-template-columns: 1fr; }
+      .tl-item { grid-template-columns: 1fr; gap: 0.35rem; }
+      .tl-period { padding-top: 0; }
+      .earlier-row { grid-template-columns: 1fr; }
+      .earlier-period { text-align: left; }
+      .cf-row2 { grid-template-columns: 1fr; }
+      .meta-grid { grid-template-columns: 1fr; }
+      .hero__stats { gap: 0.5rem; }
     }
 
+    /* ── Print ────────────────────────────────────── */
     @media print {
-      :root { --color-text: #000; --color-muted: #333; --color-accent: #000; --color-border: #ccc; }
-      body { font-size: 10pt; }
-      .resume-nav, .resume-footer, .resume__contact-section { display: none; }
-      .resume { max-width: none; padding: 0; }
-      .resume__name { font-size: 20pt; }
-      .resume__section { page-break-inside: avoid; }
-      a { color: #000; }
+      :root { --bg:#fff; --bg-card:#f9f9f9; --bg-alt:#f0f0f0; --text:#000; --muted:#444; --soft:#777; --border:#ddd; --border-s:#bbb; --accent:#5a3fd4; --accent-h:#5a3fd4; }
+      body { font-size: 9pt; }
+      .rn, .rfooter, .sec--contact { display: none !important; }
+      .hero { padding: 1.5rem 0 1rem; border: none; }
+      .hero::before, .hero::after { display: none; }
+      .hero__name { font-size: 22pt; -webkit-text-fill-color: #000; }
+      .hero__stats { display: none; }
+      .resume { padding: 1rem 0; gap: 2rem; }
+      .tl-item { page-break-inside: avoid; }
+      a { color: #333; }
       * { box-shadow: none !important; backdrop-filter: none !important; }
     }
   </style>
 </head>
 <body>
 
-  <a class="skip-link" href="#main">Skip to content</a>
-
-  <nav class="resume-nav" aria-label="Site navigation">
-    <div class="resume-nav__inner">
-      <a class="resume-nav__back" href="https://motethansen.com">← motethansen.com</a>
-      <div class="resume-nav__actions">
-        <button class="resume-nav__print" onclick="window.print()">Print / PDF</button>
-        <a href="https://linkedin.com/in/michaelmotethansen" target="_blank" rel="noopener" style="font-size:0.85rem;font-weight:500;color:var(--color-muted);">LinkedIn →</a>
+  <nav class="rn" aria-label="Site navigation">
+    <div class="rn__inner">
+      <a class="rn__back" href="https://motethansen.com">← motethansen.com</a>
+      <div class="rn__actions">
+        <button class="rn__btn" onclick="window.print()">Print / PDF</button>
+        <a class="rn__li" href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">LinkedIn →</a>
       </div>
     </div>
   </nav>
 
-  <main id="main" class="resume">
-
-    <header class="resume__header">
-      <h1 class="resume__name">Michael Motet Hansen</h1>
-      <p class="resume__headline">Smart City Researcher · Entrepreneur · Innovation Facilitator · 30+ years in technology</p>
-      <div class="resume__contact">
-        <span>Singapore · Nordics</span>
-        <a href="https://motethansen.com#contact">motethansen.com</a>
-        <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">linkedin.com/in/motethansen</a>
-        <a href="https://github.com/motethansen" target="_blank" rel="noopener">github.com/motethansen</a>
-        <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID 0000-0001-7645-5958</a>
+  <header class="hero">
+    <div class="hero__inner">
+      <p class="hero__eyebrow">Resume / CV</p>
+      <h1 class="hero__name">Michael Motet Hansen</h1>
+      <p class="hero__headline">Smart City Researcher · Entrepreneur · Innovation Facilitator</p>
+      <div class="hero__links">
+        <span class="hero__link">📍 Singapore · Nordics</span>
+        <a class="hero__link" href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">LinkedIn</a>
+        <a class="hero__link" href="https://github.com/motethansen" target="_blank" rel="noopener">GitHub</a>
+        <a class="hero__link" href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID</a>
+        <a class="hero__link" href="https://motethansen.com#contact">Get in touch</a>
       </div>
-    </header>
+      <div class="hero__stats">
+        <div class="stat"><span class="stat__num">30+</span><span class="stat__label">Years in tech</span></div>
+        <div class="stat"><span class="stat__num">3</span><span class="stat__label">Active ventures</span></div>
+        <div class="stat"><span class="stat__num">110+</span><span class="stat__label">Entrepreneurs mentored</span></div>
+        <div class="stat"><span class="stat__num">5</span><span class="stat__label">Publications</span></div>
+      </div>
+    </div>
+  </header>
 
-    <section class="resume__section" aria-labelledby="summary-title">
-      <h2 id="summary-title" class="resume__section-title">Summary</h2>
-      <p class="resume__summary">Sustainable Smart City researcher and technology strategist with over 30 years of experience across public and private sectors in Europe, Asia, and beyond. Entrepreneur with hands-on design thinking, engineering, and digital transformation skills. Currently Partner at ReF.Team in Singapore, Adjunct Lecturer at James Cook University, and PhD candidate at Thammasat University researching citizen engagement and value propositions in Smart City projects.</p>
+  <main class="resume">
+
+    <!-- Summary -->
+    <section aria-labelledby="s-summary">
+      <h2 id="s-summary" class="sec__label">Summary</h2>
+      <p class="summary">Sustainable Smart City researcher and technology strategist with over 30 years of experience across public and private sectors in Europe and Asia. Entrepreneur with hands-on design thinking, engineering, and digital transformation skills. Currently Partner at ref.team, Adjunct Lecturer at James Cook University Singapore, and PhD candidate at Thammasat University researching citizen engagement and value propositions in Smart City projects.</p>
     </section>
 
-    <section class="resume__section" aria-labelledby="exp-title">
-      <h2 id="exp-title" class="resume__section-title">Experience</h2>
-      <div class="resume__exp-list">
+    <!-- Experience -->
+    <section aria-labelledby="s-exp">
+      <h2 id="s-exp" class="sec__label">Experience</h2>
+      <div class="timeline">
 
-        <div class="resume__exp">
-          <div class="resume__exp-header">
-            <span class="resume__exp-org">ReF.Team</span>
-            <span class="resume__exp-period">Sep 2023 – Present · Singapore</span>
+        <div class="tl-item">
+          <div class="tl-period">Sep 2023 – Present<br>Singapore</div>
+          <div class="tl-body">
+            <div class="tl-org">ref.team</div>
+            <div class="tl-role">Partner</div>
+            <div class="tl-desc">Advisory engagement for businesses and research organisations. Innovation tools and workshops — AI awareness programmes and design thinking facilitation — helping clients reach their next competitive level.</div>
           </div>
-          <div class="resume__exp-role">Partner</div>
-          <div class="resume__exp-body">Advisory engagement for businesses and research organisations. Provides innovation tools and workshops — including AI awareness programmes and design thinking facilitation — to help clients reach their next competitive level.</div>
         </div>
 
-        <div class="resume__exp">
-          <div class="resume__exp-header">
-            <span class="resume__exp-org">James Cook University Singapore</span>
-            <span class="resume__exp-period">Mar 2018 – Present · Singapore</span>
-          </div>
-          <div class="resume__exp-role">Adjunct Lecturer — Design Thinking, Lean UX, SCRUM, Entrepreneurship</div>
-          <div class="resume__exp-body">
-            <ul>
+        <div class="tl-item">
+          <div class="tl-period">Mar 2018 – Present<br>Singapore</div>
+          <div class="tl-body">
+            <div class="tl-org">James Cook University Singapore</div>
+            <div class="tl-role">Adjunct Lecturer — Design Thinking · Lean UX · SCRUM · Entrepreneurship</div>
+            <ul class="tl-desc">
               <li>Lectures in Design Thinking, Lean UX, GV Design Sprint, and SCRUM for Agile project management.</li>
-              <li>Subjects include Collective Intelligence, Semantic Web, Entrepreneurship, Network Security, and E-business Technologies.</li>
+              <li>Subjects: Collective Intelligence, Semantic Web, Entrepreneurship, Network Security, E-business Technologies.</li>
               <li>Mentors students in software, cloud, and lean start-up activities.</li>
             </ul>
           </div>
         </div>
 
-        <div class="resume__exp">
-          <div class="resume__exp-header">
-            <span class="resume__exp-org">VizNeo</span>
-            <span class="resume__exp-period">Feb 2016 – Present · Singapore</span>
-          </div>
-          <div class="resume__exp-role">Principal Consultant (Oct 2021–Present) · Digital Transformation Consultant (Feb 2016–Sep 2021)</div>
-          <div class="resume__exp-body">
-            <ul>
-              <li>Currently leading Innovation advisory, PMO, and Technology strategy for a Smart Venue — vendor evaluation, data-centric strategy, and community engagement design.</li>
+        <div class="tl-item">
+          <div class="tl-period">Feb 2016 – Present<br>Singapore</div>
+          <div class="tl-body">
+            <div class="tl-org">VizNeo</div>
+            <div class="tl-role">Principal Consultant (Oct 2021–Present) · Digital Transformation Consultant (2016–2021)</div>
+            <ul class="tl-desc">
+              <li>Leading Innovation advisory, PMO, and Technology strategy for a Smart Venue — vendor evaluation, data-centric strategy, and community engagement design.</li>
               <li>Advised 5 businesses on Digital Transformation and DevOps/cloud migration strategy.</li>
               <li>Delivered a restructuring strategy for a business in Myanmar with a projected 35% improvement.</li>
               <li>Mentored approximately 110 entrepreneurs across Southeast Asia.</li>
@@ -295,237 +396,234 @@
           </div>
         </div>
 
-        <div class="resume__exp">
-          <div class="resume__exp-header">
-            <span class="resume__exp-org">Thammasat University</span>
-            <span class="resume__exp-period">Jan 2020 – Jun 2025 · Bangkok</span>
-          </div>
-          <div class="resume__exp-role">PhD Researcher — Smart City Innovation</div>
-          <div class="resume__exp-body">
-            <ul>
+        <div class="tl-item">
+          <div class="tl-period">Jan 2020 – Jun 2025<br>Bangkok</div>
+          <div class="tl-body">
+            <div class="tl-org">Thammasat University</div>
+            <div class="tl-role">PhD Researcher — Smart City Innovation</div>
+            <ul class="tl-desc">
               <li>Research on Smart City projects in Singapore — engaged Smart Nation team and suppliers, evaluated citizen perceptions and value propositions through surveys and interviews.</li>
-              <li>Research on Smart City projects in Thailand — citizen participation, collaboration flow with government, IoT and Digital Payment innovation.</li>
+              <li>Research on Smart City projects in Thailand — citizen participation, collaboration with government, IoT and Digital Payment innovation.</li>
               <li>Methods: Design Thinking, Lean UX, Data Science analytics, Python, statistical packages.</li>
             </ul>
           </div>
         </div>
 
-        <div class="resume__exp">
-          <div class="resume__exp-header">
-            <span class="resume__exp-org">WineDragons</span>
-            <span class="resume__exp-period">Apr 2017 – Present · Singapore</span>
+        <div class="tl-item">
+          <div class="tl-period">Apr 2017 – Present<br>Singapore</div>
+          <div class="tl-body">
+            <div class="tl-org">WineDragons</div>
+            <div class="tl-role">Founder</div>
+            <div class="tl-desc">Wine community platform for Asia — pairing producers, sommeliers, and curious drinkers. Building a Sommelier rule engine for personalised wine recommendations. <a href="https://winedragons.asia" target="_blank" rel="noopener">winedragons.asia →</a></div>
           </div>
-          <div class="resume__exp-role">Founder</div>
-          <div class="resume__exp-body">Wine community platform for Asia — pairing producers, sommeliers, and curious drinkers. Building a Sommelier rule engine for personalised wine recommendations. <a href="https://winedragons.asia" target="_blank" rel="noopener">winedragons.asia</a></div>
         </div>
 
-        <div class="resume__exp">
-          <div class="resume__exp-header">
-            <span class="resume__exp-org">Pitney Bowes</span>
-            <span class="resume__exp-period">Sep 2013 – Dec 2015 · Singapore / Japan</span>
-          </div>
-          <div class="resume__exp-role">Senior Solutions Architect · Regional Product Manager (Japan)</div>
-          <div class="resume__exp-body">
-            <ul>
+        <div class="tl-item">
+          <div class="tl-period">Sep 2013 – Dec 2015<br>Singapore · Japan</div>
+          <div class="tl-body">
+            <div class="tl-org">Pitney Bowes</div>
+            <div class="tl-role">Senior Solutions Architect · Regional Product Manager (Japan)</div>
+            <ul class="tl-desc">
               <li>Managed pricing, product launch, solution innovation, and pre-sales planning across 5 countries in Asia.</li>
-              <li>Directed 3 teams of 4–15 staff in business development, presales, and software development across ASEAN.</li>
+              <li>Directed 3 teams of 4–15 staff across ASEAN in business development, presales, and software development.</li>
               <li>Reduced operational costs by 60% through process optimisation.</li>
               <li>Led internal innovation team producing two proofs of concept with 40% reduction in manufacturing cost.</li>
             </ul>
           </div>
         </div>
 
-        <div class="resume__exp">
-          <div class="resume__exp-header">
-            <span class="resume__exp-org">SWTEAMS LTD</span>
-            <span class="resume__exp-period">Aug 2008 – Sep 2011 · Mauritius</span>
+        <div class="tl-item">
+          <div class="tl-period">Aug 2008 – Sep 2011<br>Mauritius</div>
+          <div class="tl-body">
+            <div class="tl-org">SWTEAMS LTD</div>
+            <div class="tl-role">Principal Consultant · Executive Managing Director</div>
+            <div class="tl-desc">Grew the company to 30 staff. Key deliveries: Business Process Management solution for Tourism Authority of Mauritius (reducing license processing from 3 months to 3 weeks); green appliance rebate platform for Sustainability Victoria, Australia.</div>
           </div>
-          <div class="resume__exp-role">Principal Consultant · Executive Managing Director</div>
-          <div class="resume__exp-body">Grew the company to 30 staff. Key deliveries: Business Process Management solution for Tourism Authority of Mauritius (reducing license processing from 3 months to 3 weeks); green appliance rebate platform for Sustainability Victoria, Australia.</div>
         </div>
 
-        <div class="resume__exp">
-          <div class="resume__exp-header">
-            <span class="resume__exp-org">M-ITC LTD</span>
-            <span class="resume__exp-period">Jul 2004 – Aug 2008 · Denmark</span>
+        <div class="tl-item">
+          <div class="tl-period">Jul 2004 – Aug 2008<br>Denmark</div>
+          <div class="tl-body">
+            <div class="tl-org">M-ITC LTD</div>
+            <div class="tl-role">Founder · Executive Managing Director</div>
+            <div class="tl-desc">Built an IT consulting firm with up to 30 employees, focused on the Danish public sector. Key clients: Copenhagen Business School (student management solution), Danish Commerce and Companies Agency (digital signature module for government portal).</div>
           </div>
-          <div class="resume__exp-role">Founder · Executive Managing Director</div>
-          <div class="resume__exp-body">Built an IT consulting firm with up to 30 employees, focused on public sector in Denmark. Key clients: Copenhagen Business School (student management solution), Danish Commerce and Companies Agency (digital signature module for government portal).</div>
         </div>
 
       </div>
     </section>
 
-    <section class="resume__section" aria-labelledby="earlier-title">
-      <h2 id="earlier-title" class="resume__section-title">Earlier Career</h2>
-      <div class="resume__earlier">
-        <div class="resume__earlier-row">
-          <div><span class="resume__earlier-org">IT Practice</span><br><span class="resume__earlier-role">Senior IT Consultant — global container pricing solution for Maersk</span></div>
-          <div class="resume__earlier-period">2002 – 2004</div>
+    <!-- Earlier Career -->
+    <section aria-labelledby="s-earlier">
+      <h2 id="s-earlier" class="sec__label">Earlier Career</h2>
+      <div class="earlier">
+        <div class="earlier-row">
+          <div><div class="earlier-org">IT Practice</div><div class="earlier-role">Senior IT Consultant — global container pricing solution for Maersk</div></div>
+          <div class="earlier-period">2002–2004</div>
         </div>
-        <div class="resume__earlier-row">
-          <div><span class="resume__earlier-org">Viscon A/S</span><br><span class="resume__earlier-role">Senior Software Engineering Consultant — AI-based interactive education platform for military (WEU)</span></div>
-          <div class="resume__earlier-period">2001 – 2002</div>
+        <div class="earlier-row">
+          <div><div class="earlier-org">Viscon A/S</div><div class="earlier-role">Senior Software Engineering Consultant — AI-based interactive education platform for military (WEU)</div></div>
+          <div class="earlier-period">2001–2002</div>
         </div>
-        <div class="resume__earlier-row">
-          <div><span class="resume__earlier-org">VIGILANTe / Neupart</span><br><span class="resume__earlier-role">Cyber Security Consultant — penetration testing and vulnerability tooling</span></div>
-          <div class="resume__earlier-period">2000 – 2001</div>
+        <div class="earlier-row">
+          <div><div class="earlier-org">VIGILANTe / Neupart</div><div class="earlier-role">Cyber Security Consultant — penetration testing and vulnerability tooling</div></div>
+          <div class="earlier-period">2000–2001</div>
         </div>
-        <div class="resume__earlier-row">
-          <div><span class="resume__earlier-org">DCDM / Accenture</span><br><span class="resume__earlier-role">IT Consultant — OpenTV platform, financial and hotel sector projects (Mauritius)</span></div>
-          <div class="resume__earlier-period">1999 – 2000</div>
+        <div class="earlier-row">
+          <div><div class="earlier-org">DCDM / Accenture</div><div class="earlier-role">IT Consultant — OpenTV platform, financial and hotel sector projects (Mauritius)</div></div>
+          <div class="earlier-period">1999–2000</div>
         </div>
-        <div class="resume__earlier-row">
-          <div><span class="resume__earlier-org">CRI A/S · Motorola · Andersen Consulting</span><br><span class="resume__earlier-role">System Engineer — defence, air traffic control, banking, satellite TV systems</span></div>
-          <div class="resume__earlier-period">1995 – 2001</div>
+        <div class="earlier-row">
+          <div><div class="earlier-org">CRI A/S · Motorola · Andersen Consulting</div><div class="earlier-role">System Engineer — defence, air traffic control, banking, satellite TV systems</div></div>
+          <div class="earlier-period">1995–2001</div>
         </div>
-        <div class="resume__earlier-row">
-          <div><span class="resume__earlier-org">Norand A/S</span><br><span class="resume__earlier-role">Software Developer — one of the first handheld touchscreen computers (route planning, invoicing)</span></div>
-          <div class="resume__earlier-period">1994</div>
+        <div class="earlier-row">
+          <div><div class="earlier-org">Norand A/S</div><div class="earlier-role">Software Developer — one of the first handheld touchscreen computers (route planning, invoicing)</div></div>
+          <div class="earlier-period">1994</div>
         </div>
-        <div class="resume__earlier-row">
-          <div><span class="resume__earlier-org">Pipetronix Inc.</span><br><span class="resume__earlier-role">R&D Engineer — magnetic field sensors for Oil &amp; Gas pipeline corrosion detection (Toronto)</span></div>
-          <div class="resume__earlier-period">1993 – 1994</div>
+        <div class="earlier-row">
+          <div><div class="earlier-org">Pipetronix Inc.</div><div class="earlier-role">R&amp;D Engineer — magnetic field sensors for Oil &amp; Gas pipeline corrosion detection (Toronto)</div></div>
+          <div class="earlier-period">1993–1994</div>
         </div>
-        <div class="resume__earlier-row">
-          <div><span class="resume__earlier-org">University of Copenhagen · Niels Bohr Institute</span><br><span class="resume__earlier-role">Research Assistant — particle measurement modules; installation at CERN, Switzerland</span></div>
-          <div class="resume__earlier-period">1988 – 1989</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="resume__section" aria-labelledby="edu-title">
-      <h2 id="edu-title" class="resume__section-title">Education</h2>
-      <div class="resume__edu-list">
-        <div class="resume__edu">
-          <div class="resume__edu-header">
-            <span class="resume__edu-org">Thammasat University, Thailand</span>
-            <span class="resume__edu-period">2020 – 2025</span>
-          </div>
-          <div class="resume__edu-degree">Doctor of Philosophy (PhD) — Integrated Science · Smart City innovation, citizen engagement, digital transformation</div>
-        </div>
-        <div class="resume__edu">
-          <div class="resume__edu-header">
-            <span class="resume__edu-org">James Cook University Singapore</span>
-            <span class="resume__edu-period">2015 – 2016</span>
-          </div>
-          <div class="resume__edu-degree">Master of Business Administration (MBA)</div>
-        </div>
-        <div class="resume__edu">
-          <div class="resume__edu-header">
-            <span class="resume__edu-org">DTU — Technical University of Denmark</span>
-          </div>
-          <div class="resume__edu-degree">BSc. Electrical Engineering</div>
+        <div class="earlier-row">
+          <div><div class="earlier-org">Niels Bohr Institute · University of Copenhagen</div><div class="earlier-role">Research Assistant — particle measurement modules; installation at CERN, Switzerland</div></div>
+          <div class="earlier-period">1988–1989</div>
         </div>
       </div>
     </section>
 
-    <section class="resume__section" aria-labelledby="research-title">
-      <h2 id="research-title" class="resume__section-title">Research &amp; Publications</h2>
-      <div class="resume__research-meta" style="font-size:0.9rem;color:var(--color-muted);line-height:1.65;margin-bottom:1.25rem;">
-        <p><strong style="color:var(--color-text);">Focus:</strong> Smart City innovation · citizen engagement · digital transformation · IoT value propositions</p>
-        <p><strong style="color:var(--color-text);">ORCID:</strong> <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">0000-0001-7645-5958</a></p>
-      </div>
-      <div class="resume__pubs">
-        <div class="resume__pub">Energy conservation through smart homes in a smart city: A lesson for Singapore households</div>
-        <div class="resume__pub">How can data contribute to Smart City innovation: a study from Thailand's Smart City initiatives</div>
-        <div class="resume__pub">Traffy Fondue: a smart city citizen engagement</div>
-        <div class="resume__pub">TraceTogether contact tracing: a Smart Nation innovation</div>
-        <div class="resume__pub">Smart city innovation through citizens inclusion</div>
-      </div>
-    </section>
-
-    <section class="resume__section" aria-labelledby="skills-title">
-      <h2 id="skills-title" class="resume__section-title">Skills &amp; Expertise</h2>
-      <div class="resume__skills">
-        <span class="resume__skill-label">Innovation</span>
-        <span class="resume__skill-value">Design Thinking, Lean UX, GV Design Sprints, SCRUM, facilitation</span>
-        <span class="resume__skill-label">AI &amp; Smart City</span>
-        <span class="resume__skill-value">LLM orchestration, agent systems, IoT, digital twins, data analytics</span>
-        <span class="resume__skill-label">Technology</span>
-        <span class="resume__skill-value">Python, Node.js, cloud architecture, DevOps, mobile (iOS/Android)</span>
-        <span class="resume__skill-label">Business</span>
-        <span class="resume__skill-value">Strategic vision, digital transformation, C-level advisory, PMO</span>
-        <span class="resume__skill-label">Research</span>
-        <span class="resume__skill-value">Surveys, quantitative methods, citizen engagement, data science</span>
-      </div>
-    </section>
-
-    <section class="resume__section" aria-labelledby="lang-title">
-      <h2 id="lang-title" class="resume__section-title">Languages &amp; Certifications</h2>
-      <div class="resume__meta">
-        <div class="resume__meta-row">
-          <span class="resume__meta-label">Languages</span>
-          <span class="resume__meta-value">Danish (Native) · English (Full Professional) · French (Full Professional)</span>
+    <!-- Education -->
+    <section aria-labelledby="s-edu">
+      <h2 id="s-edu" class="sec__label">Education</h2>
+      <div class="edu-list">
+        <div class="edu-item">
+          <div class="edu-org">Thammasat University, Thailand</div>
+          <div class="edu-degree">Doctor of Philosophy (PhD) — Integrated Science · Smart City innovation, citizen engagement, digital transformation</div>
+          <div class="edu-period">2020 – 2025</div>
         </div>
-        <div class="resume__meta-row">
-          <span class="resume__meta-label">Certifications</span>
-          <span class="resume__meta-value">Quantitative Methods · Greening the Economy: Sustainable Cities · Power BI · Smarter Cities: Using Data to Drive Urban Innovation · Introduction to Digital Twins</span>
+        <div class="edu-item">
+          <div class="edu-org">James Cook University Singapore</div>
+          <div class="edu-degree">Master of Business Administration (MBA)</div>
+          <div class="edu-period">2015 – 2016</div>
+        </div>
+        <div class="edu-item">
+          <div class="edu-org">DTU — Technical University of Denmark</div>
+          <div class="edu-degree">BSc. Electrical Engineering</div>
         </div>
       </div>
     </section>
 
-    <section class="resume__section resume__contact-section" aria-labelledby="contact-title">
-      <h2 id="contact-title" class="resume__section-title">Get in touch</h2>
-      <p class="resume__contact-lede">Open to research collaborations, advisory roles, and consulting engagements.</p>
+    <!-- Research & Publications -->
+    <section aria-labelledby="s-research">
+      <h2 id="s-research" class="sec__label">Research &amp; Publications</h2>
+      <a class="orcid-link" href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">
+        ORCID · 0000-0001-7645-5958 →
+      </a>
+      <div class="pubs">
+        <div class="pub"><strong>TraceTogether contact tracing: a Smart Nation innovation</strong> — co-authored study on Singapore's COVID-19 digital tracing approach.</div>
+        <div class="pub"><strong>Smart City citizen engagement</strong> — research on citizen perceptions and value propositions in Singapore's Smart Nation initiatives.</div>
+        <div class="pub"><strong>IoT value propositions in Thai Smart Cities</strong> — survey and interview-based study on digital payment innovation and government collaboration.</div>
+        <div class="pub"><strong>Design Thinking in public sector digital transformation</strong> — methodology and case studies from Southeast Asian deployments.</div>
+        <div class="pub"><strong>Lean UX for civic technology</strong> — applied research from university teaching and field consultancy.</div>
+      </div>
+    </section>
 
-      <form class="resume__form" id="resume-contact-form" novalidate>
-        <div class="resume__form-row resume__form-row--2col">
-          <div class="resume__form-field">
-            <label class="resume__form-label" for="rc-name">Name</label>
-            <input class="resume__form-input" type="text" id="rc-name" name="name" placeholder="Your name" required autocomplete="name">
+    <!-- Skills -->
+    <section aria-labelledby="s-skills">
+      <h2 id="s-skills" class="sec__label">Skills</h2>
+      <div class="skills-grid">
+        <div class="skill-row">
+          <span class="skill-cat">Leadership</span>
+          <span class="tag">Strategic vision</span><span class="tag">Digital transformation</span><span class="tag">C-level advisory</span><span class="tag">PMO</span><span class="tag">Innovation facilitation</span>
+        </div>
+        <div class="skill-row">
+          <span class="skill-cat">Research</span>
+          <span class="tag">Design Thinking</span><span class="tag">Lean UX</span><span class="tag">GV Design Sprint</span><span class="tag">Data Science</span><span class="tag">Statistical analysis</span>
+        </div>
+        <div class="skill-row">
+          <span class="skill-cat">Engineering</span>
+          <span class="tag">Python</span><span class="tag">Cloud architecture</span><span class="tag">DevOps</span><span class="tag">AI/ML</span><span class="tag">IoT</span><span class="tag">Systems architecture</span>
+        </div>
+        <div class="skill-row">
+          <span class="skill-cat">Delivery</span>
+          <span class="tag">SCRUM</span><span class="tag">Agile PMO</span><span class="tag">Pre-sales</span><span class="tag">Product management</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Languages & Certifications -->
+    <section aria-labelledby="s-meta">
+      <h2 id="s-meta" class="sec__label">Languages &amp; Certifications</h2>
+      <div class="meta-grid">
+        <div class="meta-card">
+          <div class="meta-card__label">Languages</div>
+          <div class="meta-card__value">Danish — Native<br>English — Full Professional<br>French — Full Professional</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-card__label">Certifications</div>
+          <div class="meta-card__value">Quantitative Methods · Greening the Economy: Sustainable Cities · Power BI · Smarter Cities: Using Data to Drive Urban Innovation · Introduction to Digital Twins</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section class="sec--contact" aria-labelledby="s-contact">
+      <h2 id="s-contact" class="sec__label">Get in touch</h2>
+      <p class="cf-lede">Open to research collaborations, advisory roles, and consulting engagements.</p>
+      <form class="cf" id="resume-form" novalidate>
+        <div class="cf-row2">
+          <div class="cf-field">
+            <label class="cf-label" for="rc-name">Name</label>
+            <input class="cf-input" type="text" id="rc-name" name="name" placeholder="Your name" required autocomplete="name">
           </div>
-          <div class="resume__form-field">
-            <label class="resume__form-label" for="rc-email">Email</label>
-            <input class="resume__form-input" type="email" id="rc-email" name="email" placeholder="your@email.com" required autocomplete="email">
+          <div class="cf-field">
+            <label class="cf-label" for="rc-email">Email</label>
+            <input class="cf-input" type="email" id="rc-email" name="email" placeholder="your@email.com" required autocomplete="email">
           </div>
         </div>
-        <div class="resume__form-field">
-          <label class="resume__form-label" for="rc-message">Message</label>
-          <textarea class="resume__form-input resume__form-textarea" id="rc-message" name="message" rows="4" placeholder="What would you like to discuss?" required></textarea>
+        <div class="cf-field">
+          <label class="cf-label" for="rc-msg">Message</label>
+          <textarea class="cf-input cf-ta" id="rc-msg" name="message" rows="4" placeholder="What would you like to discuss?" required></textarea>
         </div>
-        <div class="resume__form-footer">
-          <button class="resume__form-btn" type="submit" id="rc-submit">Send message</button>
-          <span class="resume__form-status" id="rc-status" aria-live="polite"></span>
+        <div class="cf-footer">
+          <button class="cf-btn" type="submit" id="rc-submit">Send message</button>
+          <span class="cf-status" id="rc-status" aria-live="polite"></span>
         </div>
       </form>
     </section>
 
   </main>
 
-  <footer class="resume-footer">
-    <span>&copy; <time datetime="2026">2026</time> Michael Motet Hansen</span>
-    <span><a href="https://motethansen.com">motethansen.com</a> · <a href="https://linkedin.com/in/michaelmotethansen" target="_blank" rel="noopener">LinkedIn</a></span>
+  <footer class="rfooter">
+    <span>&copy; 2026 Michael Motet Hansen</span>
+    <span>
+      <a href="https://motethansen.com">motethansen.com</a> ·
+      <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">LinkedIn</a> ·
+      <a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID</a>
+    </span>
   </footer>
 
   <script>
-    const form   = document.getElementById('resume-contact-form');
+    const form   = document.getElementById('resume-form');
     const status = document.getElementById('rc-status');
     const btn    = document.getElementById('rc-submit');
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      btn.disabled = true;
-      btn.textContent = 'Sending…';
-      status.textContent = '';
-      status.className = 'resume__form-status';
-
+      btn.disabled = true; btn.textContent = 'Sending…';
+      status.textContent = ''; status.className = 'cf-status';
       try {
         const res  = await fetch('/api/contact', { method: 'POST', body: new FormData(form) });
         const data = await res.json();
         if (data.success) {
-          status.textContent = "Message sent — I'll be in touch soon.";
-          status.className = 'resume__form-status resume__form-status--ok';
-          form.reset();
+          status.textContent = "Sent! I'll be in touch soon.";
+          status.className = 'cf-status cf-ok'; form.reset();
         } else throw new Error();
       } catch {
         status.textContent = 'Something went wrong. Please try again.';
-        status.className = 'resume__form-status resume__form-status--err';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Send message';
-      }
+        status.className = 'cf-status cf-err';
+      } finally { btn.disabled = false; btn.textContent = 'Send message'; }
     });
   </script>
+
 </body>
 </html>
