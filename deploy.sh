@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
-cd "$(dirname "$0")"
-echo "Deploying motethansen-site to Cloudflare Pages..."
+REPO="$(dirname "$0")"
+cd "$REPO"
+
+echo "▶ Deploying Pages site..."
 wrangler pages deploy public --project-name motethansen-site --commit-dirty=true
-echo "Done."
+
+echo ""
+echo "▶ Deploying feed-refresh Worker..."
+cd "$REPO/workers/feed-refresh"
+wrangler deploy
+
+echo ""
+echo "✅ All done."

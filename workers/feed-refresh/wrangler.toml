@@ -1,0 +1,12 @@
+name            = "motethansen-feed-refresh"
+main            = "worker.js"
+compatibility_date = "2024-01-01"
+account_id      = "f999794776f99de37612b4abbfbfc21a"
+
+# Cron triggers — runs daily at 06:00 UTC and weekly Sunday at 07:00 UTC
+[triggers]
+crons = ["0 6 * * *"]
+
+[[kv_namespaces]]
+binding = "SITE_KV"
+id     = "1b97cac1e10d4bcaaa1bef301a86af26"

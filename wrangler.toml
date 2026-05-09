@@ -1,3 +1,7 @@
 name = "motethansen-site"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = "public"
+
+[[kv_namespaces]]
+binding = "SITE_KV"
+id = "1b97cac1e10d4bcaaa1bef301a86af26"
