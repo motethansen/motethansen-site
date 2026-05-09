@@ -1,30 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Michael Hansen | Senior Software Engineer</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Michael Mote Hansen — entrepreneur, AI researcher, and innovation facilitator based in the Nordics. Working at the intersection of AI, innovation, and human potential.">
+  <meta name="author" content="Michael Mote Hansen">
+  <meta name="theme-color" content="#ffffff">
+
+  <meta property="og:title" content="Michael Mote Hansen">
+  <meta property="og:description" content="Entrepreneur · Researcher · Builder. Working at the intersection of AI, innovation, and human potential.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://motethansen.com">
+
+  <title>Michael Mote Hansen — Entrepreneur, Researcher, Builder</title>
+
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <main>
-        <header>
-            <h1>Michael Hansen</h1>
-            <p class="subtitle">Building distributed systems & intelligent infrastructure.</p>
-        </header>
-        
-        <section class="links">
-            <a href="https://github.com/motethansen" target="_blank" rel="noopener">GitHub</a>
-            <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">LinkedIn</a>
-            <a href="mailto:hello@motethansen.com">Email</a>
-        </section>
 
-        <footer>
-            <p>&copy; 2026 Michael Hansen</p>
-        </footer>
-    </main>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="nav" aria-label="Primary">
+      <a class="nav__brand" href="#top">Michael Mote Hansen</a>
+      <ul class="nav__links">
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#refteam">ref.team</a></li>
+        <li><a href="#research">Research</a></li>
+        <li><a href="#writing">Writing</a></li>
+        <li><a href="#resume">Resume</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+
+    <section id="top" class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <p class="hero__eyebrow">Based in the Nordics</p>
+        <h1 id="hero-title" class="hero__title">Michael Mote Hansen</h1>
+        <p class="hero__tagline">Entrepreneur · Researcher · Builder</p>
+        <p class="hero__intro">Working at the intersection of AI, innovation, and human potential — building tools, programmes, and research that help organisations and people grow into what comes next.</p>
+        <div class="hero__cta">
+          <a class="button button--primary" href="#projects">View Projects</a>
+          <a class="button button--ghost" href="mailto:hansenmichaelmotet@gmail.com">Get in Touch</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects" class="section" aria-labelledby="projects-title">
+      <div class="container">
+        <header class="section__head">
+          <p class="section__eyebrow">Projects</p>
+          <h2 id="projects-title" class="section__title">Things I am building.</h2>
+          <p class="section__lede">A small portfolio of ventures and experiments — each at a different point on the research-to-product arc.</p>
+        </header>
+
+        <div class="cards">
+          <a class="card" href="https://winedragons.asia" target="_blank" rel="noopener">
+            <span class="card__tag">Consumer AI</span>
+            <h3 class="card__title">Wine Dragons</h3>
+            <p class="card__body">AI-powered wine discovery platform for Asia — pairing producers, sommeliers, and curious drinkers.</p>
+            <span class="card__link">winedragons.asia <span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="card" href="https://urbanlife.works" target="_blank" rel="noopener">
+            <span class="card__tag">Website</span>
+            <h3 class="card__title">UrbanLife Works</h3>
+            <p class="card__body">Urban innovation and smart city platform — covering mobility, sustainability, and the future of cities.</p>
+            <span class="card__link">urbanlife.works <span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="card" href="https://github.com/motethansen/distributed-infra" target="_blank" rel="noopener">
+            <span class="card__tag">Open Source</span>
+            <h3 class="card__title">Distributed Agent Stack</h3>
+            <p class="card__body">Multi-machine AI orchestration with Claude, Gemini, and Codex across a Tailscale mesh.</p>
+            <span class="card__link">github.com/motethansen/distributed-infra <span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="card" href="https://ref.team" target="_blank" rel="noopener">
+            <span class="card__tag">Practice</span>
+            <h3 class="card__title">ref.team</h3>
+            <p class="card__body">Innovation facilitation and AI awareness programmes for organisations moving from curiosity to capability.</p>
+            <span class="card__link">ref.team <span aria-hidden="true">→</span></span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="refteam" class="section section--feature" aria-labelledby="refteam-title">
+      <div class="container">
+        <header class="section__head">
+          <p class="section__eyebrow">Spotlight</p>
+          <h2 id="refteam-title" class="section__title">ref.team — facilitation &amp; consultancy.</h2>
+          <p class="section__lede">Helping organisations move from AI curiosity to AI capability.</p>
+        </header>
+
+        <div class="feature-grid">
+          <article class="feature">
+            <h3 class="feature__title">Innovation Workshops</h3>
+            <p class="feature__body">Structured facilitation sessions helping teams surface and prototype ideas using design thinking and AI tools. We work alongside leadership and product teams to turn ambiguity into concrete next steps.</p>
+          </article>
+
+          <article class="feature">
+            <h3 class="feature__title">AI Awareness Programmes</h3>
+            <p class="feature__body">Half-day and full-day workshops for leadership teams and employees to understand practical AI applications, risks, and opportunities — with hands-on exercises tailored to your industry and tooling.</p>
+          </article>
+        </div>
+
+        <div class="feature__cta">
+          <a class="button button--primary" href="mailto:hansenmichaelmotet@gmail.com">Work with us</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="research" class="section" aria-labelledby="research-title">
+      <div class="container">
+        <header class="section__head">
+          <p class="section__eyebrow">Research</p>
+          <h2 id="research-title" class="section__title">Research.</h2>
+          <p class="section__lede">Research interests in AI adoption, innovation management, and digital transformation. Publications and papers available via ORCID.</p>
+        </header>
+
+        <div class="meta-row">
+          <a class="meta-row__link" href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">
+            <span class="meta-row__label">ORCID</span>
+            <span class="meta-row__value">0000-0001-7645-5958 <span aria-hidden="true">→</span></span>
+          </a>
+        </div>
+
+        <div id="publications-list" data-orcid="0000-0001-7645-5958" class="placeholder">
+          <p class="placeholder__text">Publications loading from ORCID…</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="writing" class="section" aria-labelledby="writing-title">
+      <div class="container">
+        <header class="section__head">
+          <p class="section__eyebrow">Writing</p>
+          <h2 id="writing-title" class="section__title">Writing.</h2>
+          <p class="section__lede">Essays and notes on AI, urban innovation, and the future of organisations — published on Substack and Medium.</p>
+        </header>
+
+        <div class="meta-row">
+          <a class="meta-row__link" href="https://urbanlifeworks.substack.com/" target="_blank" rel="noopener">
+            <span class="meta-row__label">Substack</span>
+            <span class="meta-row__value">Urban AI <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="meta-row__link" href="https://medium.com/@motethansen" target="_blank" rel="noopener">
+            <span class="meta-row__label">Medium</span>
+            <span class="meta-row__value">@motethansen <span aria-hidden="true">→</span></span>
+          </a>
+        </div>
+
+        <div id="writing-feed" class="placeholder">
+          <p class="placeholder__text">Latest posts loading…</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="resume" class="section" aria-labelledby="resume-title">
+      <div class="container">
+        <header class="section__head">
+          <p class="section__eyebrow">Resume / CV</p>
+          <h2 id="resume-title" class="section__title">Background.</h2>
+          <p class="section__lede">Two decades across mobile and backend engineering, AI research, and innovation consulting — moving between the academy, the studio, and the field.</p>
+        </header>
+
+        <div class="meta-row">
+          <a class="meta-row__link" href="https://michael.motethansen.com" target="_blank" rel="noopener">
+            <span class="meta-row__label">Full Resume</span>
+            <span class="meta-row__value">michael.motethansen.com <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="meta-row__link" href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">
+            <span class="meta-row__label">LinkedIn</span>
+            <span class="meta-row__value">linkedin.com/in/motethansen <span aria-hidden="true">→</span></span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="section section--contact" aria-labelledby="contact-title">
+      <div class="container">
+        <header class="section__head">
+          <p class="section__eyebrow">Contact</p>
+          <h2 id="contact-title" class="section__title">Get in touch.</h2>
+          <p class="section__lede">Open to research collaborations, advisory work, and conversations about AI in organisations.</p>
+        </header>
+
+        <ul class="contact-list">
+          <li>
+            <span class="contact-list__label">Email</span>
+            <a href="mailto:hansenmichaelmotet@gmail.com">hansenmichaelmotet@gmail.com</a>
+          </li>
+          <li>
+            <span class="contact-list__label">GitHub</span>
+            <a href="https://github.com/motethansen" target="_blank" rel="noopener">github.com/motethansen</a>
+          </li>
+          <li>
+            <span class="contact-list__label">LinkedIn</span>
+            <a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">linkedin.com/in/motethansen</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <p class="site-footer__copy">&copy; 2026 Michael Mote Hansen</p>
+      <ul class="site-footer__links">
+        <li><a href="https://github.com/motethansen" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://linkedin.com/in/motethansen" target="_blank" rel="noopener">LinkedIn</a></li>
+        <li><a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID</a></li>
+        <li><a href="mailto:hansenmichaelmotet@gmail.com">Email</a></li>
+      </ul>
+    </div>
+  </footer>
+
 </body>
 </html>
