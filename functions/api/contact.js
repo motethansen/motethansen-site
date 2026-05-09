@@ -1,17 +1,10 @@
 /**
  * POST /api/contact — contact form handler
- *
- * Forwards submissions to your inbox via Resend.
- * Set RESEND_API_KEY in Cloudflare Pages → Settings → Environment Variables.
- * Get a free key at https://resend.com (free tier: 3 000 emails/month).
- *
- * FROM address must be a verified domain in Resend.
- * Until you verify motethansen.com, use the Resend sandbox:
- *   from: "onboarding@resend.dev"
+ * Sends via Resend using RESEND_API_KEY + RESEND_FROM_EMAIL env vars
+ * (set in Cloudflare Pages → Settings → Environment Variables).
  */
 
 const RECIPIENT = "hansenmichaelmotet@gmail.com";
-const FROM      = "Contact Form <contact@motethansen.com>";
 
 export async function onRequestPost({ request, env }) {
   let name, email, message;
@@ -34,20 +27,25 @@ export async function onRequestPost({ request, env }) {
     return jsonResponse({ success: false, error: "Invalid email address." }, 400);
   }
 
-  // Send via Resend if API key is configured
-  if (env.RESEND_API_KEY) {
+  // Send via Resend
+  const apiKey  = env.RESEND_API_KEY;
+  const fromAddr = env.RESEND_FROM_EMAIL
+    ? `Contact Form <${env.RESEND_FROM_EMAIL}>`
+    : "Contact Form <noreply@vizneo.com>";
+
+  if (apiKey) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+          "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: FROM,
-          to: [RECIPIENT],
+          from:     fromAddr,
+          to:       [RECIPIENT],
           reply_to: email,
-          subject: `[motethansen.com] Message from ${name}`,
+          subject:  `[motethansen.com] Message from ${name}`,
           html: `
             <p><strong>Name:</strong> ${escHtml(name)}</p>
             <p><strong>Email:</strong> ${escHtml(email)}</p>
@@ -60,14 +58,12 @@ export async function onRequestPost({ request, env }) {
       if (!res.ok) {
         const body = await res.text();
         console.error("Resend error:", res.status, body);
-        // Still return success to the visitor — don't expose internals
       }
     } catch (err) {
       console.error("Email send failed:", err);
     }
   } else {
-    // No API key configured yet — log so it's visible in Workers logs
-    console.log("Contact form submission (no RESEND_API_KEY):", { name, email, message });
+    console.log("Contact form (no RESEND_API_KEY):", { name, email, message });
   }
 
   return jsonResponse({ success: true });
