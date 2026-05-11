@@ -43,13 +43,7 @@ const SOURCES = [
     feed: "https://medium.com/feed/vizneo-academy",
     link: "https://medium.com/vizneo-academy",
   },
-  {
-    id: "personal-medium",
-    name: "Michael Motet Hansen",
-    platform: "Medium",
-    feed: "https://medium.com/feed/@motethansen",
-    link: "https://motethansen.medium.com",
-  },
+  // { id: "personal-medium", name: "Michael Motet Hansen", platform: "Medium", feed: "https://medium.com/feed/@motethansen", link: "https://motethansen.medium.com" }, // disabled — duplicates publication feeds
 ];
 
 // ── Entry points ──────────────────────────────────────
