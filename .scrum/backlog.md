@@ -1,25 +1,64 @@
 # motethansen-site — Backlog
+_Last updated: 2026-05-11_
 
-## Sprint 1 (current)
+---
 
-- [ ] **UX/Design review** — define visual direction, typography, colour system, layout grid. Review 2–3 reference sites before committing to a component structure.
-- [ ] **RSS Workers** — implement Cloudflare Workers to fetch and edge-cache highlight cards from:
-  - Vizneo Academy (Substack)
-  - urbanlife.works (Substack)
-  - Medium publications
-- [ ] **Resume page** — build mmichael.motethansen.com as a separate route in the same repo. Data from LinkedIn export → JSON Resume schema. Design to match main site aesthetic.
-- [ ] **Local dev workflow** — wire up `wrangler dev` so the full site (Workers + static) runs locally. Document clone → dev → deploy steps in README.
-
-## Backlog
-
-- [ ] Custom domain: motethansen.com → Cloudflare Pages
-- [ ] Research section: journal publications + active projects
-- [ ] Project cards: winedragons.asia, urbanlife.works, ref.team
-- [ ] Analytics: Cloudflare Web Analytics (privacy-first, no cookies)
-- [ ] Dark mode toggle
-- [ ] OG images for social sharing
-
-## Done
-
+## Done (Sprint 1 — 2026-05-09)
 - [x] Scaffold index.html + style.css + wrangler.toml
-- [x] Deploy to Cloudflare Pages (motethansen-site.pages.dev)
+- [x] Deploy to Cloudflare Pages (motethansen.com)
+- [x] Dark theme — gradient hero, card hover effects, visual depth
+- [x] Contact form + Resend API integration
+- [x] Mastodon link (me.dm/@motethansen)
+- [x] Writing feed — 4 RSS feeds, images, pub link pills, card grid
+- [x] Daily feed-refresh Worker (cron 06:00 UTC, KV cache)
+- [x] Vizneo + ref.team project cards and spotlight section
+- [x] Academic Tool project card (EdTech)
+- [x] Resume page — public/resume/index.html (dark, standalone CSS)
+- [x] michael.motethansen.com → /resume/ via ASSETS.fetch() middleware rewrite
+- [x] deploy.sh — one-command deploy for Pages + Worker
+- [x] .gitignore — exclude .env, .wrangler/, secrets
+- [x] Custom domain: motethansen.com → Cloudflare Pages
+- [x] Research section: ORCID publications + active projects
+- [x] Project cards: winedragons.asia, urbanlife.works, ref.team, vizneo.com, academictool.vizneo.com
+
+## Done (Sprint 2 — 2026-05-09 to 2026-05-11)
+- [x] ORCID live publications (client-side fetch, both pages)
+- [x] #resume hash redirect → michael.motethansen.com
+- [x] LinkedIn URL corrected → /in/michaelmotethansen/
+- [x] Location: "Based in Southeast Asia"
+- [x] ref.team / Vizneo relationship clarified
+- [x] Research lede: urban innovation + smart city
+- [x] Hero copy updated
+- [x] Wine Dragons + Urban Life Works card descriptions updated
+- [x] Academic Tool: remove institution name from card
+- [x] Resume summary: PhD completed (Integrated Science, Thammasat)
+- [x] DTU degree: Electronic Engineering (not Electrical)
+- [x] JCU subjects + lecturer section updated (Business Innovation, Lean UX, Agile PM)
+- [x] JCU: cross-subject Design Sprint every 3 months added
+- [x] Skills: Smart Cities (Research) + Design Thinking (Delivery)
+- [x] Personal Medium feed disabled (duplicates)
+- [x] Favicon: SVG mh monogram, purple-to-teal gradient
+- [x] Resume section: background summary + "Read my resume here" link
+
+---
+
+## Backlog (Upcoming)
+
+### High priority
+- [ ] **Analytics** — Cloudflare Web Analytics (privacy-first, no cookies)
+- [ ] **OG images** — social share previews for motethansen.com and michael.motethansen.com
+- [ ] **Resend domain verification** — verify vizneo.com in Resend dashboard so noreply@vizneo.com sends correctly
+- [ ] **ref.team page** — content and link audit; ensure ref.team site is live and linked correctly
+
+### Medium priority
+- [ ] **Mobile layout review** — test writing grid, pub-list, and timeline on small screens
+- [ ] **Print CSS review** — verify resume print/PDF output in Chrome and Safari
+- [ ] **Writing feed: date display** — show relative dates (e.g. "3 days ago") for recent posts
+- [ ] **Manual refresh endpoint docs** — document the `/refresh?secret=...` URL for triggering feed updates outside cron
+
+### Low priority / Ideas
+- [ ] Dark mode toggle (currently always dark)
+- [ ] Wine Dragons project page
+- [ ] UrbanLife Works project page
+- [ ] Add more ORCID paper details (abstract, co-authors) on click/expand
+- [ ] Local dev workflow — wire up `wrangler dev` for full local stack
