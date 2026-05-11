@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7b61ff"/>
+      <stop offset="100%" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#13131f"/>
+      <stop offset="100%" stop-color="#0d0d18"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+  <!-- Subtle inner glow -->
+  <rect width="32" height="32" rx="7" fill="none" stroke="url(#grad)" stroke-width="0.75" opacity="0.4"/>
+  <!-- mh monogram -->
+  <text
+    x="16"
+    y="21.5"
+    text-anchor="middle"
+    font-family="Inter, 'Helvetica Neue', Arial, sans-serif"
+    font-size="14"
+    font-weight="700"
+    letter-spacing="-0.5"
+    fill="url(#grad)"
+  >mh</text>
+</svg>
