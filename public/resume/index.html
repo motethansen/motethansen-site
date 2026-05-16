@@ -584,6 +584,7 @@
           <label class="cf-label" for="rc-msg">Message</label>
           <textarea class="cf-input cf-ta" id="rc-msg" name="message" rows="4" placeholder="What would you like to discuss?" required></textarea>
         </div>
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAADQVbWt6YPm-aCnL" data-theme="dark"></div>
         <div class="cf-footer">
           <button class="cf-btn" type="submit" id="rc-submit">Send message</button>
           <span class="cf-status" id="rc-status" aria-live="polite"></span>
@@ -644,6 +645,8 @@
       }
     })();
   </script>
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <script>
     const form   = document.getElementById('resume-form');

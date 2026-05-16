@@ -226,6 +226,7 @@
               <label class="form-label" for="cf-message">Message</label>
               <textarea class="form-input form-textarea" id="cf-message" name="message" rows="5" placeholder="What would you like to discuss?" required></textarea>
             </div>
+            <div class="cf-turnstile" data-sitekey="0x4AAAAAADQVbWt6YPm-aCnL" data-theme="dark"></div>
             <div class="form-footer">
               <button class="button button--primary" type="submit" id="cf-submit">Send message</button>
               <p class="form-status" id="form-status" aria-live="polite"></p>
@@ -359,6 +360,8 @@
       return String(s||'').replace(/"/g,'&quot;');
     }
   </script>
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <script>
     const form = document.getElementById('contact-form');

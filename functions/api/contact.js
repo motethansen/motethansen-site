@@ -2,21 +2,23 @@
  * POST /api/contact — contact form handler
  * Sends via Resend using RESEND_API_KEY + RESEND_FROM_EMAIL env vars
  * (set in Cloudflare Pages → Settings → Environment Variables).
+ * Turnstile verification uses MOTETHANSEN_TURNSTILE_SECRET.
  */
 
 const RECIPIENT = "hansenmichaelmotet@gmail.com";
 
 export async function onRequestPost({ request, env }) {
-  let name, email, message;
+  let name, email, message, turnstileToken;
 
   const ct = request.headers.get("content-type") || "";
   if (ct.includes("application/json")) {
-    ({ name, email, message } = await request.json());
+    ({ name, email, message, turnstileToken } = await request.json());
   } else {
     const fd = await request.formData();
-    name    = fd.get("name");
-    email   = fd.get("email");
-    message = fd.get("message");
+    name           = fd.get("name");
+    email          = fd.get("email");
+    message        = fd.get("message");
+    turnstileToken = fd.get("cf-turnstile-response");
   }
 
   // Basic validation
@@ -25,6 +27,23 @@ export async function onRequestPost({ request, env }) {
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return jsonResponse({ success: false, error: "Invalid email address." }, 400);
+  }
+
+  // Turnstile verification
+  const turnstileSecret = env.MOTETHANSEN_TURNSTILE_SECRET;
+  if (turnstileSecret) {
+    if (!turnstileToken) {
+      return jsonResponse({ success: false, error: "Security check required." }, 400);
+    }
+    const verify = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: turnstileSecret, response: turnstileToken }),
+    });
+    const result = await verify.json();
+    if (!result.success) {
+      return jsonResponse({ success: false, error: "Security check failed. Please try again." }, 400);
+    }
   }
 
   // Send via Resend
