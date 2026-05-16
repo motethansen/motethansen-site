@@ -5,8 +5,7 @@
  * and writes the result to KV so the website always shows fresh content.
  *
  * Crons (wrangler.toml):
- *   "0 6 * * *"  — daily at 06:00 UTC
- *   "0 7 * * 0"  — weekly Sunday at 07:00 UTC (belt-and-suspenders)
+ *   "0 20 * * *"  — daily at 20:00 UTC
  *
  * Also handles GET /refresh for manual triggers (protected by REFRESH_SECRET).
  */

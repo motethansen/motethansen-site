@@ -3,9 +3,9 @@ main            = "worker.js"
 compatibility_date = "2024-01-01"
 account_id      = "f999794776f99de37612b4abbfbfc21a"
 
-# Cron triggers — runs daily at 06:00 UTC and weekly Sunday at 07:00 UTC
+# Cron triggers — runs daily at 20:00 UTC (after typical publishing window)
 [triggers]
-crons = ["0 6 * * *"]
+crons = ["0 20 * * *"]
 
 [[kv_namespaces]]
 binding = "SITE_KV"
