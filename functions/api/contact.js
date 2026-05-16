@@ -8,18 +8,21 @@
 const RECIPIENT = "hansenmichaelmotet@gmail.com";
 
 export async function onRequestPost({ request, env }) {
-  let name, email, message, turnstileToken;
+  let name, email, message, source, turnstileToken;
 
   const ct = request.headers.get("content-type") || "";
   if (ct.includes("application/json")) {
-    ({ name, email, message, turnstileToken } = await request.json());
+    ({ name, email, message, source, turnstileToken } = await request.json());
   } else {
     const fd = await request.formData();
     name           = fd.get("name");
     email          = fd.get("email");
     message        = fd.get("message");
+    source         = fd.get("source");
     turnstileToken = fd.get("cf-turnstile-response");
   }
+
+  const sourceLabel = source || "Unknown";
 
   // Basic validation
   if (!name || !email || !message) {
@@ -64,10 +67,11 @@ export async function onRequestPost({ request, env }) {
           from:     fromAddr,
           to:       [RECIPIENT],
           reply_to: email,
-          subject:  `[motethansen.com] Message from ${name}`,
+          subject:  `[motethansen.com · ${escHtml(sourceLabel)}] Message from ${name}`,
           html: `
             <p><strong>Name:</strong> ${escHtml(name)}</p>
             <p><strong>Email:</strong> ${escHtml(email)}</p>
+            <p><strong>Source:</strong> ${escHtml(sourceLabel)}</p>
             <hr>
             <p>${escHtml(message).replace(/\n/g, "<br>")}</p>
           `,
