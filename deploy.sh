@@ -17,4 +17,9 @@ cd "$REPO/workers/feed-refresh"
 wrangler deploy
 
 echo ""
+echo "▶ Busting writing feed cache..."
+cd "$REPO"
+wrangler kv key delete "writing-feed-v3" --namespace-id=1b97cac1e10d4bcaaa1bef301a86af26 --remote
+
+echo ""
 echo "✅ All done."
