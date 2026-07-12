@@ -8,10 +8,17 @@
  *   "0 20 * * *"  — daily at 20:00 UTC
  *
  * Also handles GET /refresh for manual triggers (protected by REFRESH_SECRET).
+ *
+ * Also merges in manually maintained LinkedIn articles (see content/linkedin-posts.js) —
+ * LinkedIn has no public RSS feed for individual articles.
  */
+
+import { LINKEDIN_POSTS } from "../../content/linkedin-posts.js";
 
 const CACHE_KEY = "writing-feed-v3";   // Must match functions/api/writing.js
 const MAX_POSTS  = 9;
+
+const LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/michaelmotethansen/recent-activity/articles/";
 
 const SOURCES = [
   {
@@ -28,21 +35,6 @@ const SOURCES = [
     feed: "https://vizneoacademy.substack.com/feed",
     link: "https://vizneoacademy.substack.com/",
   },
-  {
-    id: "ulw-medium",
-    name: "Urban Life Works",
-    platform: "Medium",
-    feed: "https://medium.com/feed/urban-life-works",
-    link: "https://medium.com/urban-life-works",
-  },
-  {
-    id: "va-medium",
-    name: "Vizneo Academy",
-    platform: "Medium",
-    feed: "https://medium.com/feed/vizneo-academy",
-    link: "https://medium.com/vizneo-academy",
-  },
-  // { id: "personal-medium", name: "Michael Motet Hansen", platform: "Medium", feed: "https://medium.com/feed/@motethansen", link: "https://motethansen.medium.com" }, // disabled — duplicates publication feeds
 ];
 
 // ── Entry points ──────────────────────────────────────
@@ -97,6 +89,17 @@ async function refreshFeeds(env) {
       console.warn(`[feed-refresh] ${SOURCES[i].id} failed:`, r.reason?.message);
     }
   }
+
+  // Add manually maintained LinkedIn articles
+  for (const p of LINKEDIN_POSTS) {
+    posts.push({
+      title: p.title, url: p.url, date: p.date,
+      image: p.image || null, description: p.description || "",
+      source: "Michael Motet Hansen", platform: "LinkedIn",
+      sourceLink: LINKEDIN_PROFILE_URL, sourceId: "linkedin",
+    });
+  }
+  console.log(`[feed-refresh] linkedin: ${LINKEDIN_POSTS.length} posts`);
 
   // Sort newest-first, deduplicate, cap at MAX_POSTS
   posts.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -183,9 +186,7 @@ function extractImage(item) {
 
 function isImage(url) {
   return /\.(jpe?g|png|webp|gif|avif)/i.test(url)
-    || url.includes("substackcdn")
-    || url.includes("miro.medium")
-    || url.includes("cdn-images");
+    || url.includes("substackcdn");
 }
 
 function stripHtml(html) {

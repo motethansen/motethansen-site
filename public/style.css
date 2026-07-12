@@ -578,9 +578,9 @@ img {
   color: #ff6719;
 }
 
-.pub-link__platform--medium {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text-muted);
+.pub-link__platform--linkedin {
+  background: rgba(10, 102, 194, 0.15);
+  color: #0a66c2;
 }
 
 /* ── ORCID publications list ───────────────────────── */
@@ -727,9 +727,9 @@ a.pub-item__title:hover {
   color: #ff6719;
 }
 
-.badge--medium {
-  background: rgba(255,255,255,0.07);
-  color: var(--color-text-soft);
+.badge--linkedin {
+  background: rgba(10, 102, 194, 0.15);
+  color: #0a66c2;
 }
 
 .wcard__source {

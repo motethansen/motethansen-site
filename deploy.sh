@@ -8,6 +8,11 @@ cd "$REPO"
 unset CF_API_TOKEN CF_ACCOUNT_ID CF_EMAIL
 unset CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_EMAIL
 
+# The Wrangler OAuth session has access to multiple Cloudflare accounts, so
+# non-interactive `wrangler` commands can't auto-select one. Pin it to the
+# account this site lives in (same as workers/feed-refresh/wrangler.toml).
+export CLOUDFLARE_ACCOUNT_ID=f999794776f99de37612b4abbfbfc21a
+
 echo "▶ Deploying Pages site..."
 wrangler pages deploy public --project-name motethansen-site --commit-dirty=true
 

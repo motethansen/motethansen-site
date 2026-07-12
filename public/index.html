@@ -160,7 +160,7 @@
         <header class="section__head">
           <p class="section__eyebrow">Writing</p>
           <h2 id="writing-title" class="section__title">Writing.</h2>
-          <p class="section__lede">Essays and notes on AI, urban innovation, and the future of organisations — published across Substack and Medium.</p>
+          <p class="section__lede">Essays and notes on AI, urban innovation, and the future of organisations — published across Substack and LinkedIn.</p>
         </header>
 
         <div class="pub-links">
@@ -172,13 +172,9 @@
             <span class="pub-link__platform pub-link__platform--substack">Substack</span>
             <span class="pub-link__name">Vizneo Academy</span>
           </a>
-          <a class="pub-link" href="https://medium.com/urban-life-works" target="_blank" rel="noopener">
-            <span class="pub-link__platform pub-link__platform--medium">Medium</span>
-            <span class="pub-link__name">Urban Life Works</span>
-          </a>
-          <a class="pub-link" href="https://medium.com/vizneo-academy" target="_blank" rel="noopener">
-            <span class="pub-link__platform pub-link__platform--medium">Medium</span>
-            <span class="pub-link__name">Vizneo Academy</span>
+          <a class="pub-link" href="https://www.linkedin.com/in/michaelmotethansen/recent-activity/articles/" target="_blank" rel="noopener">
+            <span class="pub-link__platform pub-link__platform--linkedin">LinkedIn</span>
+            <span class="pub-link__name">Michael Motet Hansen</span>
           </a>
         </div>
 
@@ -331,7 +327,7 @@
         }
         grid.innerHTML = posts.map(p => {
           const date = p.date ? new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-          const platformClass = p.platform === 'Substack' ? 'badge--substack' : 'badge--medium';
+          const platformClass = p.platform === 'Substack' ? 'badge--substack' : 'badge--linkedin';
           const img = p.image
             ? `<img class="wcard__img" src="${escAttr(p.image)}" alt="" loading="lazy">`
             : `<div class="wcard__img wcard__img--blank"></div>`;

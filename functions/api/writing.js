@@ -1,12 +1,17 @@
 /**
  * GET /api/writing
- * Aggregates RSS feeds from Substack and Medium publications.
+ * Aggregates RSS feeds from Substack publications plus manually maintained
+ * LinkedIn articles (see content/linkedin-posts.js).
  * Returns top 9 posts sorted by date desc, with images.
  * Cached in KV for 6 hours if SITE_KV binding is configured.
  */
 
+import { LINKEDIN_POSTS } from "../../content/linkedin-posts.js";
+
 const CACHE_KEY = "writing-feed-v3";
 const CACHE_TTL = 60 * 60 * 6; // 6 hours
+
+const LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/michaelmotethansen/recent-activity/articles/";
 
 const SOURCES = [
   {
@@ -23,21 +28,6 @@ const SOURCES = [
     feed: "https://vizneoacademy.substack.com/feed",
     link: "https://vizneoacademy.substack.com/",
   },
-  {
-    id: "ulw-medium",
-    name: "Urban Life Works",
-    platform: "Medium",
-    feed: "https://medium.com/feed/urban-life-works",
-    link: "https://medium.com/urban-life-works",
-  },
-  {
-    id: "va-medium",
-    name: "Vizneo Academy",
-    platform: "Medium",
-    feed: "https://medium.com/feed/vizneo-academy",
-    link: "https://medium.com/vizneo-academy",
-  },
-  // { id: "personal-medium", name: "Michael Motet Hansen", platform: "Medium", feed: "https://medium.com/feed/@motethansen", link: "https://motethansen.medium.com" }, // disabled — duplicates publication feeds
 ];
 
 export async function onRequestGet({ env }) {
@@ -56,6 +46,16 @@ export async function onRequestGet({ env }) {
   for (const r of results) {
     if (r.status === "fulfilled") posts.push(...r.value);
     else console.warn("Feed failed:", r.reason?.message);
+  }
+
+  // Add manually maintained LinkedIn articles
+  for (const p of LINKEDIN_POSTS) {
+    posts.push({
+      title: p.title, url: p.url, date: p.date,
+      image: p.image || null, description: p.description || "",
+      source: "Michael Motet Hansen", platform: "LinkedIn",
+      sourceLink: LINKEDIN_PROFILE_URL, sourceId: "linkedin",
+    });
   }
 
   // Sort newest first, deduplicate by URL, take top 9
@@ -150,9 +150,7 @@ function extractImage(item) {
 
 function isImage(url) {
   return /\.(jpe?g|png|webp|gif|avif)/i.test(url)
-    || url.includes("substackcdn")
-    || url.includes("miro.medium")
-    || url.includes("cdn-images");
+    || url.includes("substackcdn");
 }
 
 function stripHtml(html) {
