@@ -69,14 +69,17 @@ the 3-article seed. Activation requires the operator (secrets + droplet SSH):
 1. [ ] **Cloudflare API token** — create with **Workers KV Storage: Edit**; put in droplet `.env` (`CF_API_TOKEN`).
 2. [ ] **LinkedIn `li_at` cookie** (+ `JSESSIONID`) from browser DevTools → droplet `.env`.
 3. [ ] **Resend key + alert email** → droplet `.env` (`RESEND_API_KEY`, `ALERT_EMAIL`).
-4. [ ] On droplet: `git pull` → `cd linkedin-sync` → `bash deploy/setup.sh`.
+4. [ ] On droplet: `git pull` → `cd linkedin-sync` → `bash deploy/setup.sh`
+       (cron is **opt-in** — this preps only, no scheduled scrape yet).
 5. [ ] Verify alerting: `./.venv/bin/python linkedin_sync.py --test-alert` (expect email).
 6. [ ] Seed + confirm KV path: `--from-file articles.sample.json` then `--print`.
 7. [ ] **Decision point** — `--engine http --capture ./cap --dry-run`; inspect `./cap/`:
        real articles ⇒ keep `auto`; a login/999 wall ⇒ `bash deploy/setup.sh --with-playwright`
        then `--engine playwright --capture ./cap-pw --dry-run`. **Send the capture back to
        finalize the parser against real output.**
-8. [ ] Go live: `bash deploy/run.sh` → confirm KV + live site update; cron then keeps it fresh.
+8. [ ] Go live: `bash deploy/run.sh` → confirm KV + live site update, then
+       **enable the schedule**: `bash deploy/setup.sh --enable-cron`
+       (stop anytime with `bash deploy/disable-cron.sh`).
 9. [ ] Confirm alert-on-failure end-to-end (break the cookie once, expect email, restore).
 
 ### Contingency

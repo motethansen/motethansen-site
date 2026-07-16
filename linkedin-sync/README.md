@@ -159,9 +159,19 @@ online" below):
 bash deploy/setup.sh --with-playwright   # installs Chromium (~400MB) + system deps
 ```
 
-The cron entry runs `deploy/run.sh` daily, which logs to `/var/log/linkedin-sync.log`
-(or `linkedin-sync/linkedin-sync.log` if `/var/log` isn't writable). Re-run
-`bash deploy/setup.sh` after each `git pull` to pick up dependency changes.
+**The daily cron is opt-in.** `setup.sh` does NOT schedule anything on its own —
+it only preps the venv/deps/.env, so you can validate the go-live steps first
+without a scheduled job firing. Schedule it (05:30 UTC) only when you're ready:
+
+```bash
+bash deploy/setup.sh --enable-cron   # go-live: installs the daily cron
+bash deploy/disable-cron.sh          # stop scheduled scraping again
+```
+
+Once enabled, the cron runs `deploy/run.sh` daily, logging to
+`/var/log/linkedin-sync.log` (or `linkedin-sync/linkedin-sync.log` if `/var/log`
+isn't writable). Re-run `bash deploy/setup.sh` after each `git pull` to pick up
+dependency changes — it won't touch the cron unless you pass `--enable-cron`.
 
 To update later: `cd /opt/motethansen-site && git pull && cd linkedin-sync && bash deploy/setup.sh`.
 
@@ -176,7 +186,7 @@ To update later: `cd /opt/motethansen-site && git pull && cd linkedin-sync && ba
      `--engine playwright --capture ./cap-pw --dry-run`.
 4. **Real scrape (no write):** `--dry-run` returns your articles (count > 3).
 5. **Go live:** `bash deploy/run.sh` → tail the log; confirm KV + the live site update.
-   The daily cron then keeps it fresh.
+   Then schedule it: `bash deploy/setup.sh --enable-cron`. (Undo: `bash deploy/disable-cron.sh`.)
 6. **Alert works for real:** temporarily break `LINKEDIN_LI_AT`, run `deploy/run.sh`,
    confirm the failure email — then restore the cookie.
 
@@ -189,7 +199,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now linkedin-sync.timer
 systemctl list-timers linkedin-sync.timer     # confirm next run
 ```
-(If you use systemd, remove the cron line `setup.sh` added, to avoid double runs.)
+(The cron is opt-in, so there's nothing to remove unless you ran
+`setup.sh --enable-cron`; if you did, run `bash deploy/disable-cron.sh` to avoid double runs.)
 
 ### Other DO options (not used here)
 
