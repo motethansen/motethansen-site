@@ -131,8 +131,13 @@ function feedResponse(fullPosts, wantAll, cached) {
 
 async function fetchFeed(source) {
   const res = await fetch(source.feed, {
-    headers: { "User-Agent": "motethansen.com/1.0 RSS aggregator" },
-    cf: { cacheTtl: 3600, cacheEverything: true },
+    // Browser-like UA + no cf.cacheEverything: Substack blocks bot-ish requests
+    // from Cloudflare egress, and cacheEverything can pin that block response at
+    // the edge. KV is our cache layer, so no edge subrequest caching is needed.
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
+    },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${source.id}`);
   const xml = await res.text();

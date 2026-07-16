@@ -151,8 +151,11 @@ async function getLinkedInPosts(env) {
 
 async function fetchFeed(source) {
   const res = await fetch(source.feed, {
-    headers: { "User-Agent": "motethansen.com/1.0 feed-refresh-worker" },
-    cf: { cacheTtl: 900, cacheEverything: true },
+    // Browser-like UA + no cf.cacheEverything — see functions/api/writing.js.
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
+    },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const xml = await res.text();
