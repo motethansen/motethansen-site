@@ -65,10 +65,65 @@ python linkedin_sync.py --dry-run
 
 # Inspect what's currently in KV:
 python linkedin_sync.py --print
+
+# Send a test failure-alert email (checks your Resend config):
+python linkedin_sync.py --test-alert
 ```
 
 `--from-file` also lets you hand-maintain the list (edit a JSON file, run it) if
 you ever want to bypass scraping entirely — same schema as `articles.sample.json`.
+
+### Flags
+
+| Flag | Purpose |
+|---|---|
+| `--dry-run` | Do everything except the KV write; print the merged result |
+| `--print` | Print the current KV contents and exit |
+| `--engine {auto,http,playwright}` | Fetch engine. `auto` (default) = HTTP, then Playwright if HTTP is walled |
+| `--capture DIR` | Save every raw LinkedIn response to `DIR/` (diagnose walls) |
+| `--from-capture DIR` | Re-parse a captured `DIR/` **offline** (no network) — for tuning the parser |
+| `--from-file PATH` | Load articles from a JSON file instead of scraping |
+| `--test-alert` | Send a test failure-alert email and exit |
+
+## How the scraper works (adaptive engine)
+
+LinkedIn has no article API and blocks non-browser requests from datacenter IPs.
+`fetch_articles` (in `linkedin_source.py`) therefore tries two engines:
+
+1. **HTTP** — Voyager JSON, then the author page's JSON-LD. Cheap; often walled.
+2. **Playwright** (`linkedin_playwright.py`) — real headless Chromium with your
+   `li_at` cookie; renders the page and extracts articles from JSON-LD or the DOM.
+   Only used when HTTP comes back empty/challenged. Needs `--with-playwright` setup.
+
+**Capture-first tuning.** Don't guess LinkedIn's markup — capture it, then iterate
+the parser offline:
+
+```bash
+# 1. On the droplet, see what LinkedIn actually returns for each engine:
+python linkedin_sync.py --engine http       --capture ./cap-http --dry-run
+python linkedin_sync.py --engine playwright  --capture ./cap-pw   --dry-run
+#    Inspect ./cap-*/ : real article data ⇒ that engine works;
+#    a login/999/challenge page ⇒ use the other engine.
+
+# 2. Iterate the parser against the capture with NO network (fast, safe):
+python linkedin_sync.py --from-capture ./cap-pw --dry-run
+```
+
+## Failure alerts
+
+If `RESEND_API_KEY` + `ALERT_EMAIL` are set, a **scheduled** run that fails or
+scrapes 0 articles (the usual sign of an expired `li_at`) emails you via Resend
+(`notify.py`). Manual `--dry-run` / `--from-file` / `--from-capture` runs never
+email — they show the error at your terminal. Verify with `--test-alert`.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest                       # from the linkedin-sync/ dir
+```
+Covers normalise/date/merge, the Resend alert, the JSON-LD/DOM parsers, the
+capture round-trip, and (where Chromium is installed) a real-browser DOM test.
 
 ## Verify it worked
 
@@ -90,10 +145,18 @@ git clone git@github.com:motethansen/motethansen-site.git /opt/motethansen-site
 cd /opt/motethansen-site/linkedin-sync
 bash deploy/setup.sh          # idempotent — safe to re-run after `git pull`
 
-nano .env                     # fill CF_API_TOKEN + LINKEDIN_LI_AT (+ JSESSIONID)
+nano .env                     # fill CF_API_TOKEN, LINKEDIN_LI_AT (+ JSESSIONID),
+                              #      RESEND_API_KEY, ALERT_EMAIL
 
 # seed KV once so the site has data immediately (no scraping needed):
 ./.venv/bin/python linkedin_sync.py --from-file articles.sample.json
+```
+
+Add the headless-browser fallback if HTTP is walled (see "Bring the scraper
+online" below):
+
+```bash
+bash deploy/setup.sh --with-playwright   # installs Chromium (~400MB) + system deps
 ```
 
 The cron entry runs `deploy/run.sh` daily, which logs to `/var/log/linkedin-sync.log`
@@ -101,6 +164,21 @@ The cron entry runs `deploy/run.sh` daily, which logs to `/var/log/linkedin-sync
 `bash deploy/setup.sh` after each `git pull` to pick up dependency changes.
 
 To update later: `cd /opt/motethansen-site && git pull && cd linkedin-sync && bash deploy/setup.sh`.
+
+### Bring the scraper online (once, on the droplet)
+
+1. **Alerting works:** `./.venv/bin/python linkedin_sync.py --test-alert` → check inbox.
+2. **KV path works:** `--from-file articles.sample.json` then `--print`, and
+   `curl -s 'https://motethansen.com/api/writing?all=1'` shows the seed articles.
+3. **See what LinkedIn returns:** `--engine http --capture ./cap --dry-run`.
+   - Real articles ⇒ leave engine on `auto`, done.
+   - A wall ⇒ `bash deploy/setup.sh --with-playwright`, then
+     `--engine playwright --capture ./cap-pw --dry-run`.
+4. **Real scrape (no write):** `--dry-run` returns your articles (count > 3).
+5. **Go live:** `bash deploy/run.sh` → tail the log; confirm KV + the live site update.
+   The daily cron then keeps it fresh.
+6. **Alert works for real:** temporarily break `LINKEDIN_LI_AT`, run `deploy/run.sh`,
+   confirm the failure email — then restore the cookie.
 
 ### systemd timer (alternative to cron)
 Prefer systemd? Unit files are in `deploy/systemd/`. Edit the `ExecStart` path,
