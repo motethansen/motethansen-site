@@ -167,18 +167,28 @@ class ScrapeEmptyError(RuntimeError):
 
 # ── Pipeline ──────────────────────────────────────────
 
-def collect_articles(cfg, from_file, engine="auto"):
-    if from_file:
-        with open(from_file, "r", encoding="utf-8") as fh:
+def collect_articles(cfg, args):
+    # Offline replay of a previous --capture, no network.
+    if args.from_capture:
+        import linkedin_source
+        return linkedin_source.fetch_from_capture(args.from_capture)
+    # Hand-maintained / seed JSON file.
+    if args.from_file:
+        with open(args.from_file, "r", encoding="utf-8") as fh:
             raw = json.load(fh)
         if not isinstance(raw, list):
-            raise ConfigError(f"{from_file} must contain a JSON array of articles")
+            raise ConfigError(f"{args.from_file} must contain a JSON array of articles")
         return raw
-    # Import lazily so --from-file / --print work without scraping deps configured.
+    # Live scrape. Import lazily so --from-file / --print work without scraping deps.
     import linkedin_source
     return linkedin_source.fetch_articles(
-        profile=cfg["profile"], li_at=cfg["li_at"],
-        jsessionid=cfg["jsessionid"], engine=engine)
+        profile=cfg["profile"], li_at=cfg["li_at"], jsessionid=cfg["jsessionid"],
+        engine=args.engine, capture_dir=args.capture)
+
+
+def _offline(args):
+    """True for input paths that must never alert or trigger the empty-scrape guard."""
+    return bool(args.from_file or args.from_capture)
 
 
 # cfg key -> the env var the user actually sets
@@ -205,12 +215,12 @@ def run(cfg, args):
     list. Raises ConfigError / ScrapeEmptyError / requests errors on failure so
     the caller can decide whether to alert.
     """
-    raw = collect_articles(cfg, args.from_file, getattr(args, "engine", "auto"))
+    raw = collect_articles(cfg, args)
     scraped = [p for p in (normalise(a) for a in raw) if p]
-    print(f"collected {len(scraped)} article(s) from "
-          f"{'file' if args.from_file else 'LinkedIn'}")
+    source = "capture" if args.from_capture else "file" if args.from_file else "LinkedIn"
+    print(f"collected {len(scraped)} article(s) from {source}")
 
-    if not scraped and not args.from_file:
+    if not scraped and not _offline(args):
         # A scrape that returns nothing is almost always a login/anti-bot wall,
         # not "no articles" — never let that wipe the stored list.
         raise ScrapeEmptyError(
@@ -239,6 +249,10 @@ def parse_args():
     ap = argparse.ArgumentParser(description="Sync LinkedIn articles into Cloudflare KV.")
     ap.add_argument("--from-file", metavar="PATH",
                     help="load articles from a JSON file instead of scraping LinkedIn")
+    ap.add_argument("--from-capture", metavar="DIR",
+                    help="parse articles from a previous --capture dir, offline (no network)")
+    ap.add_argument("--capture", metavar="DIR",
+                    help="save every raw LinkedIn response to DIR for inspection")
     ap.add_argument("--engine", choices=["auto", "http", "playwright"], default="auto",
                     help="LinkedIn fetch engine (default: auto = HTTP, then Playwright fallback)")
     ap.add_argument("--dry-run", action="store_true",
@@ -270,9 +284,9 @@ def main():
             "If you received it, failure alerting is configured correctly.")
         sys.exit(0 if ok else 1)
 
-    # Only a real scheduled scrape emails on failure; manual --dry-run / --from-file
+    # Only a real scheduled scrape emails on failure; manual --dry-run / offline
     # runs surface the error to the operator at the terminal instead.
-    live_scrape = not args.from_file and not args.dry_run
+    live_scrape = not _offline(args) and not args.dry_run
     try:
         run(cfg, args)
     except Exception as exc:  # noqa: BLE001 — top-level: report, alert, exit non-zero

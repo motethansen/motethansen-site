@@ -30,6 +30,7 @@ Prefer not to maintain this at all? Two escape hatches that need no scraping:
 """
 
 import json
+import os
 import re
 
 import requests
@@ -44,7 +45,7 @@ class LinkedInFetchError(RuntimeError):
     pass
 
 
-def fetch_articles(profile, li_at, jsessionid="", engine="auto"):
+def fetch_articles(profile, li_at, jsessionid="", engine="auto", capture_dir=None):
     """
     Return a list of raw article dicts: {title, url, date, image, description}.
     `date` may be epoch-ms or an ISO string — normalise_date() handles both.
@@ -53,6 +54,8 @@ def fetch_articles(profile, li_at, jsessionid="", engine="auto"):
       "http"       — plain-HTTP strategies only (Voyager + JSON-LD).
       "playwright" — headless-browser engine only (see linkedin_playwright.py).
       "auto"       — HTTP first, fall back to Playwright if HTTP is walled.
+    capture_dir: if set, every raw response is written there for offline
+      inspection (see linkedin_sync.py --capture) — useful for diagnosing walls.
     Raises LinkedInFetchError if nothing could be fetched.
     """
     if not li_at:
@@ -64,7 +67,7 @@ def fetch_articles(profile, li_at, jsessionid="", engine="auto"):
 
     if engine in ("auto", "http"):
         try:
-            articles = _fetch_via_http(profile, li_at, jsessionid)
+            articles = _fetch_via_http(profile, li_at, jsessionid, capture_dir)
             if articles:
                 return articles
             errors.append("http: 0 articles")
@@ -76,7 +79,8 @@ def fetch_articles(profile, li_at, jsessionid="", engine="auto"):
     if engine in ("auto", "playwright"):
         try:
             import linkedin_playwright  # lazy — only needed for this engine
-            articles = linkedin_playwright.fetch_articles(profile, li_at, jsessionid)
+            articles = linkedin_playwright.fetch_articles(
+                profile, li_at, jsessionid, capture_dir=capture_dir)
             if articles:
                 return articles
             errors.append("playwright: 0 articles")
@@ -95,13 +99,13 @@ def _no_articles_msg(errors):
             + "\n  ".join(errors or ["(all strategies returned empty)"]))
 
 
-def _fetch_via_http(profile, li_at, jsessionid):
+def _fetch_via_http(profile, li_at, jsessionid, capture_dir=None):
     """Plain-HTTP strategies: Voyager REST, then SSR HTML JSON-LD."""
     session = _session(li_at, jsessionid)
     errors = []
     for strategy in (_fetch_via_voyager, _fetch_via_html):
         try:
-            articles = strategy(session, profile)
+            articles = strategy(session, profile, capture_dir)
             if articles:
                 return articles
         except Exception as exc:  # noqa: BLE001 — record and try the next strategy
@@ -109,6 +113,59 @@ def _fetch_via_http(profile, li_at, jsessionid):
     if errors:
         raise LinkedInFetchError("; ".join(errors))
     return []
+
+
+# ── Offline replay ────────────────────────────────────
+
+def fetch_from_capture(capture_dir):
+    """
+    Parse articles from a previously captured directory (see --capture), with no
+    network. Lets us iterate the parsers against real LinkedIn output offline.
+    """
+    articles = []
+    voyager_json = _read(capture_dir, "voyager.json")
+    if voyager_json:
+        try:
+            articles += _parse_voyager(json.loads(voyager_json))
+        except ValueError:
+            pass
+    for name in ("author.html", "playwright.html"):
+        html = _read(capture_dir, name)
+        if html:
+            articles += _parse_html(html)
+    # de-dupe by url, preserve order
+    seen, out = set(), []
+    for a in articles:
+        u = a.get("url")
+        if u and u not in seen:
+            seen.add(u)
+            out.append(a)
+    return out
+
+
+# ── Capture helpers ───────────────────────────────────
+
+def _save(capture_dir, name, text, status=None):
+    """Write a raw response to capture_dir/name (best-effort; never raises)."""
+    if not capture_dir:
+        return
+    try:
+        os.makedirs(capture_dir, exist_ok=True)
+        with open(os.path.join(capture_dir, name), "w", encoding="utf-8") as fh:
+            fh.write(text or "")
+        if status is not None:
+            with open(os.path.join(capture_dir, name + ".status"), "w") as fh:
+                fh.write(str(status))
+    except Exception as exc:  # noqa: BLE001
+        print(f"capture: failed to save {name}: {exc}")
+
+
+def _read(capture_dir, name):
+    path = os.path.join(capture_dir, name)
+    if not os.path.exists(path):
+        return None
+    with open(path, "r", encoding="utf-8") as fh:
+        return fh.read()
 
 
 # ── Session ───────────────────────────────────────────
@@ -130,7 +187,7 @@ def _session(li_at, jsessionid):
 
 # ── Strategy 1: Voyager REST ──────────────────────────
 
-def _fetch_via_voyager(session, profile):
+def _fetch_via_voyager(session, profile, capture_dir=None):
     """
     Query LinkedIn's internal Voyager API for the member's articles.
 
@@ -151,10 +208,18 @@ def _fetch_via_voyager(session, profile):
         params={"q": "memberShareFeed", "count": 50, "start": 0},
         timeout=30,
     )
+    _save(capture_dir, "voyager.json", resp.text, resp.status_code)
     if resp.status_code != 200:
         raise LinkedInFetchError(f"voyager HTTP {resp.status_code}")
+    try:
+        data = resp.json()
+    except ValueError:
+        raise LinkedInFetchError("voyager: non-JSON response (likely a challenge)")
+    return _parse_voyager(data)
 
-    data = resp.json()
+
+def _parse_voyager(data):
+    """Extract pulse articles from a Voyager JSON payload."""
     elements = data.get("elements") or data.get("included") or []
     articles = []
     for el in elements:
@@ -186,20 +251,25 @@ def _article_from_voyager(el):
 
 # ── Strategy 2: SSR HTML JSON-LD ──────────────────────
 
-def _fetch_via_html(session, profile):
+def _fetch_via_html(session, profile, capture_dir=None):
     """
-    Parse JSON-LD blocks from the author's public article listing. Works when
-    LinkedIn serves server-rendered content; returns [] (caller raises) when it
-    serves only a JS shell / login wall.
+    Fetch the author's public article listing and parse JSON-LD from it. Works
+    when LinkedIn serves server-rendered content; returns [] (caller raises) when
+    it serves only a JS shell / login wall.
     """
     url = f"https://www.linkedin.com/today/author/{profile}"
     resp = session.get(url, timeout=30)
+    _save(capture_dir, "author.html", resp.text, resp.status_code)
     if resp.status_code != 200:
         raise LinkedInFetchError(f"html HTTP {resp.status_code}")
+    return _parse_html(resp.text)
 
+
+def _parse_html(html):
+    """Extract articles from JSON-LD <script> blocks in a LinkedIn HTML page."""
     articles = []
     for block in re.findall(
-        r'<script type="application/ld\+json">(.*?)</script>', resp.text, re.S
+        r'<script type="application/ld\+json">(.*?)</script>', html, re.S
     ):
         try:
             payload = json.loads(block.strip())
