@@ -7,9 +7,18 @@
 #
 # Usage (on the droplet, after cloning the repo):
 #   cd /path/to/motethansen-site/linkedin-sync
-#   bash deploy/setup.sh
+#   bash deploy/setup.sh                  # HTTP engine only
+#   bash deploy/setup.sh --with-playwright # also install headless Chromium fallback
 #
 set -euo pipefail
+
+WITH_PLAYWRIGHT=0
+for arg in "$@"; do
+  case "$arg" in
+    --with-playwright) WITH_PLAYWRIGHT=1 ;;
+    *) echo "unknown arg: $arg" >&2; exit 2 ;;
+  esac
+done
 
 HERE="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 cd "$HERE"
@@ -23,6 +32,23 @@ fi
 ./.venv/bin/pip install --quiet --upgrade pip
 ./.venv/bin/pip install --quiet -r requirements.txt
 echo "  ✓ venv + dependencies"
+
+# 1b. optional: headless Chromium for the Playwright fallback engine
+if [ "$WITH_PLAYWRIGHT" = "1" ]; then
+  echo "  installing Playwright + Chromium (this pulls ~400MB)…"
+  ./.venv/bin/pip install --quiet -r requirements-playwright.txt
+  ./.venv/bin/playwright install chromium
+  # System libs Chromium needs — requires root.
+  if [ "$(id -u)" = "0" ]; then
+    ./.venv/bin/playwright install-deps chromium || true
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo ./.venv/bin/playwright install-deps chromium || true
+  else
+    echo "  ! could not install system deps (no root/sudo). If Chromium fails to launch,"
+    echo "    run: playwright install-deps chromium   (as root)"
+  fi
+  echo "  ✓ Playwright engine ready"
+fi
 
 # 2. .env
 if [ ! -f .env ]; then
