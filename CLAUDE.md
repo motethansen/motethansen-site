@@ -34,11 +34,16 @@ workers/
     worker.js         — scheduled cron Worker (0 20 * * * UTC), writes KV with 30h backstop TTL
     wrangler.toml     — Worker config, KV binding SITE_KV
 
-linkedin-sync/        — Python job (runs on DigitalOcean) — scrapes LinkedIn articles → KV key linkedin-posts-v1
-  linkedin_sync.py    — CLI: normalise → merge (union by URL) → write KV. Flags: --from-file, --dry-run, --print
-  linkedin_source.py  — the fragile LinkedIn fetch layer (Voyager REST + JSON-LD fallback). Isolated on purpose.
+linkedin-sync/        — Python job (runs on DigitalOcean droplet, daily cron) — scrapes LinkedIn → KV key linkedin-posts-v1
+  linkedin_sync.py    — CLI + run() core: collect → normalise → merge (union by URL) → write KV.
+                        Flags: --engine {auto,http,playwright}, --capture/--from-capture, --from-file, --dry-run, --print, --test-alert
+  linkedin_source.py  — fragile fetch layer. Adaptive: HTTP (Voyager + JSON-LD) then Playwright fallback. Split fetch/parse.
+  linkedin_playwright.py — headless Chromium engine (lazy import); JSON-LD + DOM (a[href*="/pulse/"]) extraction
+  notify.py           — best-effort Resend failure-alert email (reuses site's Resend sender)
   articles.sample.json— starter data for --from-file (also the seed source of truth)
-  README.md           — DO deploy options + cookie/maintenance notes
+  deploy/             — setup.sh (venv/deps/cron; --with-playwright), run.sh (cron entrypoint), systemd/ units
+  tests/              — pytest: transform, notify, parsers, capture round-trip, real-browser DOM (auto-skips)
+  README.md           — droplet deploy + adaptive-engine/capture/alerting workflow
 
 wrangler.toml         — Pages project config, KV binding SITE_KV
 deploy.sh             — manual deploy script (unsets CF_* vars, wrangler pages deploy + wrangler deploy, busts KV)
