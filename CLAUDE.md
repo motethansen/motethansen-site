@@ -89,6 +89,13 @@ The `linkedin-sync/` job has its own `.env` (see `linkedin-sync/.env.example`) w
   Substack outage from poisoning the cache with a LinkedIn-only feed (the bug that
   hid all Substack posts). Worker write also carries a 30h backstop TTL so any bad
   state self-heals instead of sticking forever.
+- **Substack edge-fetch**: `fetchFeed` (in `functions/api/writing.js` and the
+  Worker) requests the RSS feeds with a **real browser User-Agent** and **no
+  `cf: { cacheEverything }`**. Substack blocks bot-ish UAs from Cloudflare egress,
+  and `cacheEverything` could pin that block response at the edge — which made the
+  live feed return 0 Substack posts. KV is the only cache layer; the edge does no
+  subrequest caching. If Substack ever hard-blocks Cloudflare IPs, the fallback is
+  to route these fetches through a proxy (the guard keeps that failure graceful).
 - **Archive page**: `/writing/` lists all articles with client-side search;
   homepage shows top 9 and links to it via a "View all N articles" button when total > 9.
 - **Favicon**: SVG only (`/favicon.svg`) — works in all modern browsers and scales cleanly.
