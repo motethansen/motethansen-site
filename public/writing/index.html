@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <meta name="description" content="All essays and notes by Michael Motet Hansen on AI, urban innovation, and the future of organisations — published across Substack and LinkedIn.">
+  <meta name="author" content="Michael Motet Hansen">
+  <meta name="theme-color" content="#ffffff">
+
+  <meta property="og:title" content="Writing — Michael Motet Hansen">
+  <meta property="og:description" content="All essays and notes on AI, urban innovation, and the future of organisations.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://motethansen.com/writing/">
+
+  <title>Writing — Michael Motet Hansen</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="nav" aria-label="Primary">
+      <a class="nav__brand" href="/">Michael Motet Hansen</a>
+      <ul class="nav__links">
+        <li><a href="/#projects">Projects</a></li>
+        <li><a href="/#research">Research</a></li>
+        <li><a href="/#writing">Writing</a></li>
+        <li><a href="https://michael.motethansen.com" target="_blank" rel="noopener">Resume</a></li>
+        <li><a href="/#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="section" aria-labelledby="writing-title">
+      <div class="container">
+        <a class="archive-back" href="/#writing"><span aria-hidden="true">←</span> Back to home</a>
+
+        <header class="section__head">
+          <p class="section__eyebrow">Writing</p>
+          <h2 id="writing-title" class="section__title">All articles.</h2>
+          <p class="section__lede">Essays and notes on AI, urban innovation, and the future of organisations — published across Substack and LinkedIn. Search the full archive below.</p>
+        </header>
+
+        <div class="archive-toolbar">
+          <input
+            type="search"
+            id="archive-search"
+            class="archive-search"
+            placeholder="Search articles by title, topic, or source…"
+            aria-label="Search articles"
+            autocomplete="off">
+          <span class="archive-count" id="archive-count" aria-live="polite"></span>
+        </div>
+
+        <div id="archive-grid" class="writing-grid">
+          <p class="placeholder__text">Loading articles…</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <p class="site-footer__copy">&copy; 2026 Michael Motet Hansen</p>
+      <ul class="site-footer__links">
+        <li><a href="https://github.com/motethansen" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/michaelmotethansen/" target="_blank" rel="noopener">LinkedIn</a></li>
+        <li><a href="https://me.dm/@motethansen" target="_blank" rel="noopener me">Mastodon</a></li>
+        <li><a href="https://orcid.org/0000-0001-7645-5958" target="_blank" rel="noopener">ORCID</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    (async () => {
+      const grid  = document.getElementById('archive-grid');
+      const search = document.getElementById('archive-search');
+      const count = document.getElementById('archive-count');
+      let all = [];
+
+      function fmtDate(d) {
+        return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      }
+
+      function render(posts) {
+        if (!posts.length) {
+          grid.innerHTML = '<p class="placeholder__text">No articles match your search.</p>';
+          return;
+        }
+        grid.innerHTML = posts.map(p => {
+          const platformClass = p.platform === 'Substack' ? 'badge--substack' : 'badge--linkedin';
+          const img = p.image
+            ? `<img class="wcard__img" src="${escAttr(p.image)}" alt="" loading="lazy">`
+            : `<div class="wcard__img wcard__img--blank"></div>`;
+          return `
+            <a class="wcard" href="${escAttr(p.url)}" target="_blank" rel="noopener">
+              ${img}
+              <div class="wcard__body">
+                <div class="wcard__meta">
+                  <span class="badge ${platformClass}">${escHtml(p.platform)}</span>
+                  <span class="wcard__source">${escHtml(p.source)}</span>
+                </div>
+                <h3 class="wcard__title">${escHtml(p.title)}</h3>
+                <p class="wcard__desc">${escHtml(p.description)}</p>
+                <span class="wcard__date">${fmtDate(p.date)}</span>
+              </div>
+            </a>`;
+        }).join('');
+      }
+
+      function apply() {
+        const q = search.value.trim().toLowerCase();
+        const filtered = q
+          ? all.filter(p => (
+              `${p.title} ${p.description} ${p.source} ${p.platform}`.toLowerCase().includes(q)
+            ))
+          : all;
+        count.textContent = q
+          ? `${filtered.length} of ${all.length}`
+          : `${all.length} article${all.length === 1 ? '' : 's'}`;
+        render(filtered);
+      }
+
+      try {
+        const res  = await fetch('/api/writing?all=1');
+        const data = await res.json();
+        all = data.posts || [];
+        if (!all.length) {
+          grid.innerHTML = '<p class="placeholder__text">No articles found — check back soon.</p>';
+          return;
+        }
+        apply();
+        search.addEventListener('input', apply);
+      } catch (e) {
+        grid.innerHTML = '<p class="placeholder__text">Could not load articles.</p>';
+      }
+
+      function escHtml(s) {
+        return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+      function escAttr(s) {
+        return String(s||'').replace(/"/g,'&quot;');
+      }
+    })();
+  </script>
+
+</body>
+</html>

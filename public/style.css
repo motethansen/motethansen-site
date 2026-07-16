@@ -765,6 +765,70 @@ a.pub-item__title:hover {
   padding-top: 0.5rem;
 }
 
+.writing-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 2.5rem;
+}
+
+.writing-more:empty {
+  margin-top: 0;
+}
+
+/* ── Articles archive (/writing/) ──────────────────── */
+
+.archive-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.archive-search {
+  flex: 1;
+  min-width: 220px;
+  padding: 0.7rem 1rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.archive-search::placeholder {
+  color: var(--color-text-soft);
+}
+
+.archive-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+.archive-count {
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.archive-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.archive-back:hover {
+  color: var(--color-accent);
+}
+
 /* ── Placeholder feeds ─────────────────────────────── */
 
 .placeholder {

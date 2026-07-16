@@ -24,7 +24,9 @@ wrangler deploy
 echo ""
 echo "▶ Busting writing feed cache..."
 cd "$REPO"
-wrangler kv key delete "writing-feed-v3" --namespace-id=1b97cac1e10d4bcaaa1bef301a86af26 --remote
+wrangler kv key delete "writing-feed-v4" --namespace-id=1b97cac1e10d4bcaaa1bef301a86af26 --remote
+# Old key from before the full-list cache format — clean up if still present.
+wrangler kv key delete "writing-feed-v3" --namespace-id=1b97cac1e10d4bcaaa1bef301a86af26 --remote 2>/dev/null || true
 
 echo ""
 echo "✅ All done."

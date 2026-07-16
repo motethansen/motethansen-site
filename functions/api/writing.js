@@ -1,15 +1,32 @@
 /**
  * GET /api/writing
- * Aggregates RSS feeds from Substack publications plus manually maintained
- * LinkedIn articles (see content/linkedin-posts.js).
- * Returns top 9 posts sorted by date desc, with images.
- * Cached in KV for 6 hours if SITE_KV binding is configured.
+ * Aggregates live Substack RSS feeds plus LinkedIn articles.
+ *
+ * LinkedIn source:
+ *   - Primary: KV key `linkedin-posts-v1` (a JSON array), maintained by the
+ *     external DigitalOcean sync job in linkedin-sync/. Lets new LinkedIn
+ *     articles appear with no redeploy.
+ *   - Fallback: the in-repo seed array in content/linkedin-posts.js (used when
+ *     the KV key is missing/empty, e.g. before the sync job has run).
+ *
+ * Response: { posts, total, cached }
+ *   - default: top 9 posts (homepage grid)
+ *   - ?all=1 : the full merged list (the /writing/ articles page)
+ *
+ * Caching (SITE_KV):
+ *   - The FULL merged list is cached under `writing-feed-v4` for 6h.
+ *   - GUARD: a rebuild is only written to the cache when it is "healthy"
+ *     (at least one Substack feed fetched successfully). A build where every
+ *     Substack fetch failed is served but never persisted, so a transient
+ *     Substack outage can no longer poison the cache with a LinkedIn-only feed.
  */
 
 import { LINKEDIN_POSTS } from "../../content/linkedin-posts.js";
 
-const CACHE_KEY = "writing-feed-v3";
+const CACHE_KEY = "writing-feed-v4";
+const LINKEDIN_KEY = "linkedin-posts-v1";
 const CACHE_TTL = 60 * 60 * 6; // 6 hours
+const HOME_LIMIT = 9;
 
 const LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/michaelmotethansen/recent-activity/articles/";
 
@@ -30,26 +47,54 @@ const SOURCES = [
   },
 ];
 
-export async function onRequestGet({ env }) {
-  // Try KV cache first
+export async function onRequestGet({ request, env }) {
+  const wantAll = new URL(request.url).searchParams.get("all") === "1";
+
+  // 1. Serve the cached full list if present.
   if (env.SITE_KV) {
+    const cached = await kvGetJson(env, CACHE_KEY);
+    if (Array.isArray(cached)) return feedResponse(cached, wantAll, true);
+  }
+
+  // 2. Rebuild from live sources.
+  const { posts, healthy } = await buildFeed(env);
+
+  // 3. Only persist a healthy build — never cache a Substack-less feed.
+  if (env.SITE_KV && healthy) {
     try {
-      const cached = await env.SITE_KV.get(CACHE_KEY);
-      if (cached) return jsonResponse({ posts: JSON.parse(cached), cached: true });
+      await env.SITE_KV.put(CACHE_KEY, JSON.stringify(posts), { expirationTtl: CACHE_TTL });
     } catch {}
   }
 
-  // Fetch all feeds in parallel, tolerate individual failures
+  return feedResponse(posts, wantAll, false);
+}
+
+export async function onRequestOptions() {
+  return new Response(null, { headers: corsHeaders() });
+}
+
+// ── Feed assembly ─────────────────────────────────────
+
+/**
+ * Fetch every Substack feed + LinkedIn, merge, sort, dedupe.
+ * Returns { posts: <full list>, healthy: <at least one Substack feed loaded> }.
+ */
+async function buildFeed(env) {
   const results = await Promise.allSettled(SOURCES.map(fetchFeed));
 
   const posts = [];
+  let healthy = false;
   for (const r of results) {
-    if (r.status === "fulfilled") posts.push(...r.value);
-    else console.warn("Feed failed:", r.reason?.message);
+    if (r.status === "fulfilled") {
+      healthy = true; // a feed responded (even an empty one is a real answer)
+      posts.push(...r.value);
+    } else {
+      console.warn("Feed failed:", r.reason?.message);
+    }
   }
 
-  // Add manually maintained LinkedIn articles
-  for (const p of LINKEDIN_POSTS) {
+  // LinkedIn — from KV if the sync job has populated it, else the seed array.
+  for (const p of await getLinkedInPosts(env)) {
     posts.push({
       title: p.title, url: p.url, date: p.date,
       image: p.image || null, description: p.description || "",
@@ -58,27 +103,28 @@ export async function onRequestGet({ env }) {
     });
   }
 
-  // Sort newest first, deduplicate by URL, take top 9
   posts.sort((a, b) => new Date(b.date) - new Date(a.date));
   const seen = new Set();
-  const top = posts.filter(p => {
-    if (seen.has(p.url)) return false;
+  const deduped = posts.filter(p => {
+    if (!p.url || seen.has(p.url)) return false;
     seen.add(p.url);
     return true;
-  }).slice(0, 9);
+  });
 
-  // Write to KV cache
-  if (env.SITE_KV) {
-    try {
-      await env.SITE_KV.put(CACHE_KEY, JSON.stringify(top), { expirationTtl: CACHE_TTL });
-    } catch {}
-  }
-
-  return jsonResponse({ posts: top });
+  return { posts: deduped, healthy };
 }
 
-export async function onRequestOptions() {
-  return new Response(null, { headers: corsHeaders() });
+async function getLinkedInPosts(env) {
+  if (env.SITE_KV) {
+    const stored = await kvGetJson(env, LINKEDIN_KEY);
+    if (Array.isArray(stored) && stored.length) return stored;
+  }
+  return LINKEDIN_POSTS;
+}
+
+function feedResponse(fullPosts, wantAll, cached) {
+  const posts = wantAll ? fullPosts : fullPosts.slice(0, HOME_LIMIT);
+  return jsonResponse({ posts, total: fullPosts.length, cached });
 }
 
 // ── Feed fetching ─────────────────────────────────────
@@ -160,6 +206,16 @@ function stripHtml(html) {
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"').replace(/&#?\w+;/g, " ")
     .replace(/\s+/g, " ").trim();
+}
+
+async function kvGetJson(env, key) {
+  try {
+    const raw = await env.SITE_KV.get(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function jsonResponse(body, status = 200) {
