@@ -1,22 +1,32 @@
 /**
  * motethansen-feed-refresh Worker
  *
- * Scheduled cron: fetches all RSS feeds, parses posts with images,
- * and writes the result to KV so the website always shows fresh content.
+ * Scheduled cron: fetches all Substack RSS feeds, merges in LinkedIn articles,
+ * and writes the full merged list to KV so the website always has fresh content.
  *
  * Crons (wrangler.toml):
  *   "0 20 * * *"  — daily at 20:00 UTC
  *
  * Also handles GET /refresh for manual triggers (protected by REFRESH_SECRET).
  *
- * Also merges in manually maintained LinkedIn articles (see content/linkedin-posts.js) —
- * LinkedIn has no public RSS feed for individual articles.
+ * LinkedIn source:
+ *   - Primary: KV key `linkedin-posts-v1` (JSON array), maintained by the
+ *     external DigitalOcean sync job in linkedin-sync/.
+ *   - Fallback: the in-repo seed array in content/linkedin-posts.js.
+ *
+ * GUARD: the cache is only overwritten when the rebuild is "healthy" (at least
+ * one Substack feed loaded). A build where every Substack fetch failed is
+ * returned to the caller but never written to KV, so a transient Substack
+ * outage can no longer poison the feed with a LinkedIn-only snapshot.
  */
 
 import { LINKEDIN_POSTS } from "../../content/linkedin-posts.js";
 
-const CACHE_KEY = "writing-feed-v3";   // Must match functions/api/writing.js
-const MAX_POSTS  = 9;
+const CACHE_KEY = "writing-feed-v4";     // Must match functions/api/writing.js
+const LINKEDIN_KEY = "linkedin-posts-v1";
+// Backstop TTL — safely longer than the daily cron gap, so even an unexpected
+// bad write self-heals instead of sticking forever (the old no-TTL failure mode).
+const CACHE_TTL = 60 * 60 * 30;          // 30 hours
 
 const LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/michaelmotethansen/recent-activity/articles/";
 
@@ -58,9 +68,9 @@ export default {
     }
 
     try {
-      const posts = await refreshFeeds(env);
+      const { posts, healthy } = await refreshFeeds(env);
       return new Response(
-        JSON.stringify({ ok: true, count: posts.length, posts }, null, 2),
+        JSON.stringify({ ok: true, healthy, count: posts.length, posts }, null, 2),
         { headers: { "Content-Type": "application/json" } }
       );
     } catch (err) {
@@ -80,9 +90,11 @@ async function refreshFeeds(env) {
   const results = await Promise.allSettled(SOURCES.map(fetchFeed));
 
   const posts = [];
+  let healthy = false;
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
     if (r.status === "fulfilled") {
+      healthy = true;
       console.log(`[feed-refresh] ${SOURCES[i].id}: ${r.value.length} posts`);
       posts.push(...r.value);
     } else {
@@ -90,8 +102,9 @@ async function refreshFeeds(env) {
     }
   }
 
-  // Add manually maintained LinkedIn articles
-  for (const p of LINKEDIN_POSTS) {
+  // LinkedIn — from KV if the sync job has populated it, else the seed array.
+  const linkedin = await getLinkedInPosts(env);
+  for (const p of linkedin) {
     posts.push({
       title: p.title, url: p.url, date: p.date,
       image: p.image || null, description: p.description || "",
@@ -99,22 +112,39 @@ async function refreshFeeds(env) {
       sourceLink: LINKEDIN_PROFILE_URL, sourceId: "linkedin",
     });
   }
-  console.log(`[feed-refresh] linkedin: ${LINKEDIN_POSTS.length} posts`);
+  console.log(`[feed-refresh] linkedin: ${linkedin.length} posts`);
 
-  // Sort newest-first, deduplicate, cap at MAX_POSTS
+  // Sort newest-first, dedupe by URL. Store the FULL list — the Pages Function
+  // slices it (top 9 for the homepage, all for the /writing/ page).
   posts.sort((a, b) => new Date(b.date) - new Date(a.date));
   const seen = new Set();
-  const top = posts.filter(p => {
-    if (seen.has(p.url)) return false;
+  const deduped = posts.filter(p => {
+    if (!p.url || seen.has(p.url)) return false;
     seen.add(p.url);
     return true;
-  }).slice(0, MAX_POSTS);
+  });
 
-  // Write to KV — no TTL so it never expires between cron runs
-  await env.SITE_KV.put(CACHE_KEY, JSON.stringify(top));
-  console.log(`[feed-refresh] Wrote ${top.length} posts to KV key "${CACHE_KEY}"`);
+  if (healthy) {
+    await env.SITE_KV.put(CACHE_KEY, JSON.stringify(deduped), { expirationTtl: CACHE_TTL });
+    console.log(`[feed-refresh] Wrote ${deduped.length} posts to KV key "${CACHE_KEY}"`);
+  } else {
+    console.warn(`[feed-refresh] All Substack feeds failed — skipping cache write to avoid poisoning`);
+  }
 
-  return top;
+  return { posts: deduped, healthy };
+}
+
+async function getLinkedInPosts(env) {
+  try {
+    const raw = await env.SITE_KV.get(LINKEDIN_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) return arr;
+    }
+  } catch (e) {
+    console.warn(`[feed-refresh] linkedin KV read failed:`, e?.message);
+  }
+  return LINKEDIN_POSTS;
 }
 
 // ── Feed fetching ─────────────────────────────────────

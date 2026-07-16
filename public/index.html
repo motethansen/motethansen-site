@@ -181,6 +181,8 @@
         <div id="writing-feed" class="writing-grid">
           <p class="placeholder__text">Loading latest posts…</p>
         </div>
+
+        <div id="writing-more" class="writing-more"></div>
       </div>
     </section>
 
@@ -317,6 +319,7 @@
     // ── Writing feed ──────────────────────────────────
     (async () => {
       const grid = document.getElementById('writing-feed');
+      const more = document.getElementById('writing-more');
       try {
         const res  = await fetch('/api/writing');
         const data = await res.json();
@@ -324,6 +327,10 @@
         if (!posts.length) {
           grid.innerHTML = '<p class="placeholder__text">No posts found — check back soon.</p>';
           return;
+        }
+        // If more articles exist than are shown here, offer the full archive.
+        if (more && (data.total || posts.length) > posts.length) {
+          more.innerHTML = `<a class="button button--ghost" href="/writing/">View all ${data.total} articles <span aria-hidden="true">→</span></a>`;
         }
         grid.innerHTML = posts.map(p => {
           const date = p.date ? new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
