@@ -1,0 +1,11 @@
+[Unit]
+Description=Sync LinkedIn articles into Cloudflare KV
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Adjust the path to wherever the repo lives on the droplet:
+ExecStart=/opt/motethansen-site/linkedin-sync/deploy/run.sh
+# Optional: run as a non-root user that owns the repo checkout.
+# User=deploy

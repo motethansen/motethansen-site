@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily LinkedIn -> Cloudflare KV sync
+
+[Timer]
+# 05:30 UTC daily, before the site's ~06:00 read window.
+OnCalendar=*-*-* 05:30:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

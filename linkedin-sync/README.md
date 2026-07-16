@@ -80,19 +80,42 @@ curl -s https://motethansen.com/api/writing?all=1 | python3 -m json.tool | head
 New LinkedIn posts appear within the site's 6h cache window (or immediately after
 the next `deploy.sh`, which busts the cache).
 
-## Deploying on DigitalOcean
+## Deploying on DigitalOcean (droplet cron — current setup)
 
-Any of these work — all just run `linkedin_sync.py` on a schedule.
+On the droplet, clone the repo and run the setup script. It creates the venv,
+installs deps, ensures a `.env`, and installs a daily cron (05:30 UTC).
 
-### Option A — Droplet cron (simplest)
 ```bash
-# on the droplet, after cloning the repo and installing requirements:
-crontab -e
-# run daily at 05:30 UTC (before the site's 06:00-window reads):
-30 5 * * *  cd /opt/motethansen-site/linkedin-sync && /opt/.../.venv/bin/python linkedin_sync.py >> /var/log/linkedin-sync.log 2>&1
+git clone git@github.com:motethansen/motethansen-site.git /opt/motethansen-site
+cd /opt/motethansen-site/linkedin-sync
+bash deploy/setup.sh          # idempotent — safe to re-run after `git pull`
+
+nano .env                     # fill CF_API_TOKEN + LINKEDIN_LI_AT (+ JSESSIONID)
+
+# seed KV once so the site has data immediately (no scraping needed):
+./.venv/bin/python linkedin_sync.py --from-file articles.sample.json
 ```
 
-### Option B — DO App Platform scheduled job
+The cron entry runs `deploy/run.sh` daily, which logs to `/var/log/linkedin-sync.log`
+(or `linkedin-sync/linkedin-sync.log` if `/var/log` isn't writable). Re-run
+`bash deploy/setup.sh` after each `git pull` to pick up dependency changes.
+
+To update later: `cd /opt/motethansen-site && git pull && cd linkedin-sync && bash deploy/setup.sh`.
+
+### systemd timer (alternative to cron)
+Prefer systemd? Unit files are in `deploy/systemd/`. Edit the `ExecStart` path,
+then:
+```bash
+sudo cp deploy/systemd/linkedin-sync.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now linkedin-sync.timer
+systemctl list-timers linkedin-sync.timer     # confirm next run
+```
+(If you use systemd, remove the cron line `setup.sh` added, to avoid double runs.)
+
+### Other DO options (not used here)
+
+#### DO App Platform scheduled job
 Create a **Job** component (not a Service) with an attached schedule:
 - Source: this repo, source dir `linkedin-sync`
 - Build: `pip install -r requirements.txt`
@@ -100,7 +123,7 @@ Create a **Job** component (not a Service) with an attached schedule:
 - Schedule (cron): `30 5 * * *`
 - Env vars: the same keys as `.env`, marked **encrypted**.
 
-### Option C — DO Functions (serverless)
+#### DO Functions (serverless)
 Wrap `main()` in a function handler and deploy with `doctl serverless deploy`,
 then attach a scheduled trigger. `requests` is the only runtime dep. Store the
 secrets as function parameters/env. (Cron on a droplet or App Platform Job is
