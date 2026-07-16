@@ -155,47 +155,57 @@ def kv_write(cfg, posts):
     return resp.json()
 
 
-# ── Main ──────────────────────────────────────────────
+# ── Errors ────────────────────────────────────────────
 
-def collect_articles(cfg, from_file):
+class ConfigError(RuntimeError):
+    """Missing/invalid configuration (env vars, input file)."""
+
+
+class ScrapeEmptyError(RuntimeError):
+    """The scrape returned 0 articles — treated as failure, not 'no articles'."""
+
+
+# ── Pipeline ──────────────────────────────────────────
+
+def collect_articles(cfg, from_file, engine="auto"):
     if from_file:
         with open(from_file, "r", encoding="utf-8") as fh:
             raw = json.load(fh)
         if not isinstance(raw, list):
-            sys.exit(f"error: {from_file} must contain a JSON array of articles")
+            raise ConfigError(f"{from_file} must contain a JSON array of articles")
         return raw
     # Import lazily so --from-file / --print work without scraping deps configured.
     import linkedin_source
     return linkedin_source.fetch_articles(
-        profile=cfg["profile"], li_at=cfg["li_at"], jsessionid=cfg["jsessionid"])
+        profile=cfg["profile"], li_at=cfg["li_at"],
+        jsessionid=cfg["jsessionid"], engine=engine)
+
+
+# cfg key -> the env var the user actually sets
+ENV_NAMES = {
+    "account_id": "CF_ACCOUNT_ID",
+    "namespace_id": "CF_KV_NAMESPACE_ID",
+    "api_token": "CF_API_TOKEN",
+    "profile": "LINKEDIN_PROFILE",
+    "li_at": "LINKEDIN_LI_AT",
+    "jsessionid": "LINKEDIN_JSESSIONID",
+}
 
 
 def require(cfg, keys):
     missing = [k for k in keys if not cfg[k]]
     if missing:
-        sys.exit("error: missing required env vars: "
-                 + ", ".join(k.upper() for k in missing))
+        raise ConfigError("missing required env vars: "
+                          + ", ".join(ENV_NAMES.get(k, k.upper()) for k in missing))
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Sync LinkedIn articles into Cloudflare KV.")
-    ap.add_argument("--from-file", metavar="PATH",
-                    help="load articles from a JSON file instead of scraping LinkedIn")
-    ap.add_argument("--dry-run", action="store_true",
-                    help="do everything except the KV write; print the result")
-    ap.add_argument("--print", dest="print_only", action="store_true",
-                    help="print the current KV contents and exit")
-    args = ap.parse_args()
-
-    cfg = load_env()
-
-    if args.print_only:
-        require(cfg, ["account_id", "namespace_id", "api_token"])
-        print(json.dumps(kv_read(cfg), indent=2, ensure_ascii=False))
-        return
-
-    # 1. collect + 2. normalise
-    raw = collect_articles(cfg, args.from_file)
+def run(cfg, args):
+    """
+    Core pipeline: collect -> normalise -> merge -> (write). Returns the merged
+    list. Raises ConfigError / ScrapeEmptyError / requests errors on failure so
+    the caller can decide whether to alert.
+    """
+    raw = collect_articles(cfg, args.from_file, getattr(args, "engine", "auto"))
     scraped = [p for p in (normalise(a) for a in raw) if p]
     print(f"collected {len(scraped)} article(s) from "
           f"{'file' if args.from_file else 'LinkedIn'}")
@@ -203,25 +213,74 @@ def main():
     if not scraped and not args.from_file:
         # A scrape that returns nothing is almost always a login/anti-bot wall,
         # not "no articles" — never let that wipe the stored list.
-        sys.exit("error: LinkedIn returned 0 articles — refusing to touch KV "
-                 "(likely an expired li_at cookie or an anti-bot challenge)")
+        raise ScrapeEmptyError(
+            "LinkedIn returned 0 articles — refusing to touch KV "
+            "(likely an expired li_at cookie or an anti-bot challenge)")
 
-    # 3. merge with existing KV
     require(cfg, ["account_id", "namespace_id", "api_token"])
     existing = kv_read(cfg)
     merged = merge(existing, scraped)
-    added = len(merged) - len(existing)
     print(f"KV had {len(existing)} article(s); merged -> {len(merged)} "
-          f"({added:+d})")
+          f"({len(merged) - len(existing):+d})")
 
     if args.dry_run:
         print("--dry-run: not writing. Result would be:")
         print(json.dumps(merged, indent=2, ensure_ascii=False))
-        return
+        return merged
 
-    # 4. write back
     kv_write(cfg, merged)
     print(f"wrote {len(merged)} article(s) to KV key '{KV_KEY}'")
+    return merged
+
+
+# ── CLI ───────────────────────────────────────────────
+
+def parse_args():
+    ap = argparse.ArgumentParser(description="Sync LinkedIn articles into Cloudflare KV.")
+    ap.add_argument("--from-file", metavar="PATH",
+                    help="load articles from a JSON file instead of scraping LinkedIn")
+    ap.add_argument("--engine", choices=["auto", "http", "playwright"], default="auto",
+                    help="LinkedIn fetch engine (default: auto = HTTP, then Playwright fallback)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="do everything except the KV write; print the result")
+    ap.add_argument("--print", dest="print_only", action="store_true",
+                    help="print the current KV contents and exit")
+    ap.add_argument("--test-alert", action="store_true",
+                    help="send a test failure-alert email and exit (checks Resend config)")
+    return ap.parse_args()
+
+
+def main():
+    args = parse_args()
+    cfg = load_env()
+
+    if args.print_only:
+        try:
+            require(cfg, ["account_id", "namespace_id", "api_token"])
+            print(json.dumps(kv_read(cfg), indent=2, ensure_ascii=False))
+        except Exception as exc:  # noqa: BLE001
+            sys.exit(f"error: {exc}")
+        return
+
+    if args.test_alert:
+        import notify
+        ok = notify.send_failure(
+            "test alert",
+            "This is a test alert from `linkedin_sync.py --test-alert`. "
+            "If you received it, failure alerting is configured correctly.")
+        sys.exit(0 if ok else 1)
+
+    # Only a real scheduled scrape emails on failure; manual --dry-run / --from-file
+    # runs surface the error to the operator at the terminal instead.
+    live_scrape = not args.from_file and not args.dry_run
+    try:
+        run(cfg, args)
+    except Exception as exc:  # noqa: BLE001 — top-level: report, alert, exit non-zero
+        print(f"error: {exc}", file=sys.stderr)
+        if live_scrape:
+            import notify
+            notify.send_failure("sync run failed", f"{type(exc).__name__}: {exc}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

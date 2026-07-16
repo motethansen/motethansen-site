@@ -44,10 +44,15 @@ class LinkedInFetchError(RuntimeError):
     pass
 
 
-def fetch_articles(profile, li_at, jsessionid=""):
+def fetch_articles(profile, li_at, jsessionid="", engine="auto"):
     """
     Return a list of raw article dicts: {title, url, date, image, description}.
     `date` may be epoch-ms or an ISO string — normalise_date() handles both.
+
+    engine:
+      "http"       — plain-HTTP strategies only (Voyager + JSON-LD).
+      "playwright" — headless-browser engine only (see linkedin_playwright.py).
+      "auto"       — HTTP first, fall back to Playwright if HTTP is walled.
     Raises LinkedInFetchError if nothing could be fetched.
     """
     if not li_at:
@@ -55,8 +60,44 @@ def fetch_articles(profile, li_at, jsessionid=""):
             "LINKEDIN_LI_AT is not set — cannot authenticate to LinkedIn. "
             "Set it, or run with --from-file.")
 
-    session = _session(li_at, jsessionid)
+    errors = []
 
+    if engine in ("auto", "http"):
+        try:
+            articles = _fetch_via_http(profile, li_at, jsessionid)
+            if articles:
+                return articles
+            errors.append("http: 0 articles")
+        except Exception as exc:  # noqa: BLE001 — record; maybe fall back to Playwright
+            errors.append(f"http: {exc}")
+        if engine == "http":
+            raise LinkedInFetchError(_no_articles_msg(errors))
+
+    if engine in ("auto", "playwright"):
+        try:
+            import linkedin_playwright  # lazy — only needed for this engine
+            articles = linkedin_playwright.fetch_articles(profile, li_at, jsessionid)
+            if articles:
+                return articles
+            errors.append("playwright: 0 articles")
+        except ImportError:
+            errors.append("playwright: engine not installed "
+                          "(pip install -r requirements-playwright.txt)")
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"playwright: {exc}")
+
+    raise LinkedInFetchError(_no_articles_msg(errors))
+
+
+def _no_articles_msg(errors):
+    return ("No articles returned by any strategy. This usually means the li_at "
+            "cookie is expired or LinkedIn served an anti-bot challenge. Details:\n  "
+            + "\n  ".join(errors or ["(all strategies returned empty)"]))
+
+
+def _fetch_via_http(profile, li_at, jsessionid):
+    """Plain-HTTP strategies: Voyager REST, then SSR HTML JSON-LD."""
+    session = _session(li_at, jsessionid)
     errors = []
     for strategy in (_fetch_via_voyager, _fetch_via_html):
         try:
@@ -65,11 +106,9 @@ def fetch_articles(profile, li_at, jsessionid=""):
                 return articles
         except Exception as exc:  # noqa: BLE001 — record and try the next strategy
             errors.append(f"{strategy.__name__}: {exc}")
-
-    raise LinkedInFetchError(
-        "No articles returned by any strategy. This usually means the li_at "
-        "cookie is expired or LinkedIn served an anti-bot challenge. Details:\n  "
-        + "\n  ".join(errors or ["(both strategies returned empty)"]))
+    if errors:
+        raise LinkedInFetchError("; ".join(errors))
+    return []
 
 
 # ── Session ───────────────────────────────────────────
