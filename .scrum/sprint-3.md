@@ -61,10 +61,14 @@ into the intermediate branch; its commits were re-landed via PR #4.)
 
 ---
 
-## ⏭️ Next Steps (carried to Sprint 4 — LinkedIn scraper go-live)
+## 🎯 Milestone M1 — LinkedIn Scraper Go-Live (Sprint 4)
+
+**Status:** Not started · **Owner:** operator (secrets + droplet SSH) + agent (parser finalize)
+**Definition of done:** LinkedIn articles auto-sync to KV `linkedin-posts-v1` via the
+scheduled droplet cron and appear on the live site — with failure alerting verified.
 
 The scraper code is complete, tested, and on `main`, but the KV key still holds only
-the 3-article seed. Activation requires the operator (secrets + droplet SSH):
+the 3-article seed. Activation checklist:
 
 1. [ ] **Cloudflare API token** — create with **Workers KV Storage: Edit**; put in droplet `.env` (`CF_API_TOKEN`).
 2. [ ] **LinkedIn `li_at` cookie** (+ `JSESSIONID`) from browser DevTools → droplet `.env`.
