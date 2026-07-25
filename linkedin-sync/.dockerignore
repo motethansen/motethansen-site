@@ -1,0 +1,21 @@
+# Secrets — must never enter the image layer cache.
+.env
+*.env
+!.env.example
+
+# Local Python / tooling artefacts.
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Capture dirs from --capture / --from-capture runs.
+cap/
+cap-pw/
+capture/
+*.log
+
+# VCS / editor noise.
+.git/
+.gitignore
+.DS_Store

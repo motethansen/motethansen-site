@@ -63,7 +63,10 @@ into the intermediate branch; its commits were re-landed via PR #4.)
 
 ## 🎯 Milestone M1 — LinkedIn Scraper Go-Live (Sprint 4)
 
-**Status:** Not started · **Owner:** operator (secrets + droplet SSH) + agent (parser finalize)
+**Status:** Superseded — re-planned as a **Docker** deployment in `sprint-4.md`
+(execution Fri 2026-07-24). The checklist below is retained for context; steps 4 and 8
+(venv `setup.sh` + cron) are replaced by the container + systemd-timer flow.
+**Owner:** operator (droplet + secrets) + agent (containerisation, parser finalize)
 **Definition of done:** LinkedIn articles auto-sync to KV `linkedin-posts-v1` via the
 scheduled droplet cron and appear on the live site — with failure alerting verified.
 

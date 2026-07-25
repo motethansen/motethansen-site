@@ -135,10 +135,53 @@ curl -s https://motethansen.com/api/writing?all=1 | python3 -m json.tool | head
 New LinkedIn posts appear within the site's 6h cache window (or immediately after
 the next `deploy.sh`, which busts the cache).
 
-## Deploying on DigitalOcean (droplet cron — current setup)
+## Deploying on DigitalOcean (Docker — current setup)
 
-On the droplet, clone the repo and run the setup script. It creates the venv,
-installs deps, ensures a `.env`, and installs a daily cron (05:30 UTC).
+On a Docker-enabled droplet (Ubuntu 24.04 + Docker Engine & compose plugin),
+clone the repo, create `.env`, build the image, and run the job in a container.
+The image is based on the official Playwright-python base, so **both fetch
+engines (HTTP and headless Chromium) work from one image with no rebuild** at the
+go-live decision point.
+
+```bash
+git clone git@github.com:motethansen/motethansen-site.git /opt/motethansen-site
+cd /opt/motethansen-site/linkedin-sync
+
+cp .env.example .env && chmod 600 .env
+nano .env                     # CF_API_TOKEN, LINKEDIN_LI_AT (+ JSESSIONID),
+                              # RESEND_API_KEY, ALERT_EMAIL
+
+docker compose build          # builds linkedin-sync:latest
+
+# 1. alerting works:
+docker compose run --rm sync --test-alert
+# 2. seed KV once so the site has data immediately (no scraping needed):
+docker compose run --rm sync --from-file articles.sample.json
+# 3. DECISION POINT — try HTTP, capturing raw responses for inspection:
+docker compose run --rm sync --engine http --capture ./cap --dry-run
+#    real articles  -> keep engine auto.
+#    login/999 wall -> the same image already has Chromium; try:
+docker compose run --rm sync --engine playwright --capture ./cap-pw --dry-run
+# 4. go live (first real write), then enable the daily schedule:
+bash deploy/docker-run.sh
+sudo bash deploy/enable-schedule.sh   # systemd timer, 05:30 UTC (opt-in)
+```
+
+**The daily schedule is opt-in** — nothing scrapes on a timer until you run
+`sudo bash deploy/enable-schedule.sh` (installs a systemd timer at 05:30 UTC).
+Stop it anytime with `sudo bash deploy/disable-schedule.sh`. Inspect runs with
+`journalctl -u linkedin-sync-docker.service -n 50 --no-pager`.
+
+> **Sizing:** use a droplet with **≥ 2 GB RAM**. Chromium OOM-kills on the 1 GB
+> plan and the failure looks like a parser bug. Compose sets `shm_size: 1gb` to
+> avoid the separate `/dev/shm` crash.
+
+### Legacy: venv + host cron
+
+The older non-Docker path (`deploy/setup.sh` builds a venv and installs a cron)
+still works and is documented below for reference, but Docker is the current
+setup. On the droplet, clone the repo and run the setup script. It creates the
+venv, installs deps, ensures a `.env`, and installs a daily cron (05:30 UTC).
 
 ```bash
 git clone git@github.com:motethansen/motethansen-site.git /opt/motethansen-site
