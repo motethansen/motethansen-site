@@ -1,5 +1,5 @@
 # motethansen-site — Backlog
-_Last updated: 2026-07-16_
+_Last updated: 2026-07-20_
 
 ---
 
@@ -57,13 +57,16 @@ _Last updated: 2026-07-16_
 ## Backlog (Upcoming)
 
 ### High priority
-- [ ] 🎯 **Milestone M1 — LinkedIn scraper go-live (Sprint 4)** — code is on `main`; KV
-      still holds the 3-article seed. DoD: articles auto-sync to KV via the scheduled
-      droplet cron and show on the live site. Full checklist in `sprint-3.md`:
+- [ ] 🎯 **Milestone M1 — LinkedIn scraper go-live (Sprint 4, Fri 2026-07-24)** — code is
+      on `main`; KV key `linkedin-posts-v1` does not exist yet (verified 2026-07-20), so
+      the site serves the 3-article seed. **Now runs as a Docker container** on a new
+      Docker-enabled droplet, not a host venv+cron. Full plan in `sprint-4.md`:
+  - [ ] Dockerfile (Playwright base image) + compose + opt-in systemd timer @ 05:30 UTC
+  - [ ] **Blocked:** operator to create droplet (≥2 GB RAM, Ubuntu 24.04 + Docker) and send access
   - [ ] CF API token (Workers KV: Edit), `li_at` cookie, Resend key → droplet `.env`
-  - [ ] `bash deploy/setup.sh`; `--test-alert`; seed via `--from-file`
+  - [ ] `--test-alert`; seed via `--from-file`; first-ever write to `linkedin-posts-v1`
   - [ ] Capture decision point (`--capture`): HTTP vs Playwright — send capture back to finalize parser
-  - [ ] `deploy/run.sh` go-live; verify KV + live site + failure alert
+  - [ ] Go live; verify KV + live site + failure alert
 - [ ] **Substack proxy fallback** — only if Substack hard-blocks Cloudflare IPs
       (current UA/edge-cache fix works; guard keeps failure graceful)
 - [ ] **Analytics** — Cloudflare Web Analytics (privacy-first, no cookies)

@@ -41,6 +41,11 @@ import requests
 KV_KEY = "linkedin-posts-v1"
 MAX_ARTICLES = 60  # bound the KV value size; the site only ever shows a slice
 CF_API = "https://api.cloudflare.com/client/v4"
+# Durable list of your published article URLs (one per line, # for comments).
+# The scheduled run reads this by default and re-fetches each article's public
+# metadata; adding a new article = append its URL (see --url).
+DEFAULT_URLS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 "article-urls.txt")
 
 
 # ── Config ────────────────────────────────────────────
@@ -179,11 +184,50 @@ def collect_articles(cfg, args):
         if not isinstance(raw, list):
             raise ConfigError(f"{args.from_file} must contain a JSON array of articles")
         return raw
-    # Live scrape. Import lazily so --from-file / --print work without scraping deps.
+    # URL-driven public fetch — the primary path. Reads article URLs from --url
+    # and/or a urls file, then fetches each article's public metadata (no cookie).
+    urls = _resolve_urls(args)
+    if urls is not None:
+        import linkedin_public
+        articles, errors = linkedin_public.fetch_articles(urls)
+        if errors and not articles:
+            # Every URL failed — surface it (likely a network/block issue) rather
+            # than silently proceeding to a no-op merge.
+            raise ScrapeEmptyError(
+                "all article URLs failed to fetch:\n  "
+                + "\n  ".join(f"{u}: {e}" for u, e in errors))
+        return articles
+    # Legacy cookie scrape (kept for completeness; LinkedIn walls the listing
+    # from datacentre IPs, so this usually returns nothing there). Import lazily.
     import linkedin_source
     return linkedin_source.fetch_articles(
         profile=cfg["profile"], li_at=cfg["li_at"], jsessionid=cfg["jsessionid"],
         engine=args.engine, capture_dir=args.capture)
+
+
+def _resolve_urls(args):
+    """Return the list of article URLs to fetch, or None if this isn't a URL run.
+
+    Sources, in order: explicit --url values, an explicit --urls-file, else the
+    DEFAULT_URLS_FILE if it exists (so the scheduled run just works). A URL run is
+    also implied whenever --url is given. Returns None only when there are no URLs
+    anywhere and no scrape-suppressing flags — i.e. fall back to the legacy scrape.
+    """
+    urls = list(args.url or [])
+    path = args.urls_file or (DEFAULT_URLS_FILE if os.path.exists(DEFAULT_URLS_FILE) else None)
+    if path:
+        if not os.path.exists(path):
+            raise ConfigError(f"--urls-file not found: {path}")
+        with open(path, "r", encoding="utf-8") as fh:
+            urls += [ln.strip() for ln in fh if ln.strip() and not ln.lstrip().startswith("#")]
+    if not urls:
+        return None
+    # De-dupe, preserve order.
+    seen, out = set(), []
+    for u in urls:
+        if u not in seen:
+            seen.add(u); out.append(u)
+    return out
 
 
 def _offline(args):
@@ -247,6 +291,15 @@ def run(cfg, args):
 
 def parse_args():
     ap = argparse.ArgumentParser(description="Sync LinkedIn articles into Cloudflare KV.")
+    ap.add_argument("--url", metavar="URL", action="append",
+                    help="fetch this article's PUBLIC metadata by URL (repeatable); "
+                         "does not modify article-urls.txt")
+    ap.add_argument("--add-url", metavar="URL", action="append",
+                    help="append URL(s) to article-urls.txt (the durable list) and "
+                         "fetch them (repeatable). Use this when you publish a new article")
+    ap.add_argument("--urls-file", metavar="PATH",
+                    help=f"read article URLs from PATH (default: {os.path.basename(DEFAULT_URLS_FILE)} "
+                         "if present)")
     ap.add_argument("--from-file", metavar="PATH",
                     help="load articles from a JSON file instead of scraping LinkedIn")
     ap.add_argument("--from-capture", metavar="DIR",
@@ -264,9 +317,31 @@ def parse_args():
     return ap.parse_args()
 
 
+def _append_urls(paths, urls):
+    """Append new URLs to the durable urls file (creating it), skipping dupes."""
+    path = paths or DEFAULT_URLS_FILE
+    existing = set()
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as fh:
+            existing = {ln.strip() for ln in fh if ln.strip() and not ln.lstrip().startswith("#")}
+    added = [u.strip() for u in urls if u.strip() and u.strip() not in existing]
+    if added:
+        with open(path, "a", encoding="utf-8") as fh:
+            for u in added:
+                fh.write(u + "\n")
+        print(f"added {len(added)} URL(s) to {os.path.basename(path)}")
+    else:
+        print("no new URLs to add (already present)")
+
+
 def main():
     args = parse_args()
     cfg = load_env()
+
+    # --add-url: persist to the durable list first, so the run below (which reads
+    # that file) picks them up. Also fetched this run via _resolve_urls.
+    if args.add_url:
+        _append_urls(args.urls_file, args.add_url)
 
     if args.print_only:
         try:

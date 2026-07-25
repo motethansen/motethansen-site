@@ -1,0 +1,12 @@
+# Published LinkedIn article URLs — the durable source of truth for the site's
+# LinkedIn feed. One URL per line; lines starting with # are ignored.
+#
+# The daily job fetches each article's PUBLIC page and reads its Open Graph /
+# JSON-LD metadata (no login cookie, no walled listing scrape), then merges into
+# Cloudflare KV. When you publish a new article, append its URL here — or run:
+#   docker compose run --rm sync --add-url "https://www.linkedin.com/pulse/..."
+# which appends it here and fetches it in one step.
+
+https://www.linkedin.com/pulse/smart-city-trap-why-were-measuring-wrong-things-how-fix-hansen-phd-veplc
+https://www.linkedin.com/pulse/what-my-nephew-i-discovered-ai-game-audio-sound-michael-hansen-kznze
+https://www.linkedin.com/pulse/why-some-perfectionists-struggle-become-entrepreneurs-michael-hansen-5rspc

@@ -1,0 +1,34 @@
+# LinkedIn -> Cloudflare KV sync — Compose definition.
+#
+# This is a BATCH job, not a long-running service. Run it on demand or from the
+# systemd timer with:
+#
+#   docker compose run --rm sync [flags]
+#
+# `run --rm` executes one pass and removes the container. There is deliberately
+# no `restart:` policy and the service is never `up`-ed — a crashed scrape must
+# NOT auto-restart in a loop (that would hammer LinkedIn and burn the cookie).
+
+services:
+  sync:
+    build: .
+    image: linkedin-sync:latest
+    env_file: .env          # CF_*, LINKEDIN_*, RESEND_* — see .env.example
+    # Persist --capture output to the host so raw LinkedIn responses can be
+    # inspected after the container exits. Pass `--capture /captures` to use it.
+    # The host ./captures dir must be writable by uid 1000 (the image's pwuser).
+    volumes:
+      - ./captures:/captures
+      # The durable article URL list lives on the HOST (survives container exit and
+      # image rebuilds) and is mounted writable so `--add-url` can append to it.
+      # The host file must be writable by uid 1001 (the image's pwuser).
+      - ./article-urls.txt:/app/article-urls.txt
+    # Chromium needs a larger /dev/shm than Docker's 64MB default or it crashes
+    # on some pages. Cheap insurance whether or not the Playwright path is used.
+    shm_size: "1gb"
+    # Cap log growth on the droplet.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
