@@ -27,6 +27,11 @@ const CACHE_KEY = "writing-feed-v4";
 const LINKEDIN_KEY = "linkedin-posts-v1";
 const CACHE_TTL = 60 * 60 * 6; // 6 hours
 const HOME_LIMIT = 9;
+// Per-feed safety bound. Substack serves the publication's whole archive in its
+// RSS feed, so this must be well above the post count or imported back-catalogue
+// articles get silently truncated (they carry their original, older dates and so
+// sort below the cut). Keep in sync with workers/feed-refresh/worker.js.
+const MAX_ITEMS_PER_FEED = 100;
 
 const LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/michaelmotethansen/recent-activity/articles/";
 
@@ -148,7 +153,10 @@ async function fetchFeed(source) {
 
 function parseRSS(xml, source) {
   const itemMatches = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
-  return itemMatches.slice(0, 5).map(m => parseItem(m[1], source)).filter(Boolean);
+  return itemMatches
+    .slice(0, MAX_ITEMS_PER_FEED)
+    .map(m => parseItem(m[1], source))
+    .filter(Boolean);
 }
 
 function parseItem(item, source) {
@@ -161,6 +169,8 @@ function parseItem(item, source) {
   ).slice(0, 180).trim();
 
   if (!title || !url) return null;
+  // Substack auto-creates a "/p/coming-soon" welcome stub per publication.
+  if (/\/p\/coming-soon\/?$/i.test(url)) return null;
 
   return { title, url, date, image, description: desc,
            source: source.name, platform: source.platform,

@@ -27,6 +27,9 @@ const LINKEDIN_KEY = "linkedin-posts-v1";
 // Backstop TTL — safely longer than the daily cron gap, so even an unexpected
 // bad write self-heals instead of sticking forever (the old no-TTL failure mode).
 const CACHE_TTL = 60 * 60 * 30;          // 30 hours
+// Per-feed safety bound — see functions/api/writing.js. Must stay above each
+// publication's total post count or the older archive gets truncated away.
+const MAX_ITEMS_PER_FEED = 100;
 
 const LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/michaelmotethansen/recent-activity/articles/";
 
@@ -166,7 +169,10 @@ async function fetchFeed(source) {
 
 function parseRSS(xml, source) {
   const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
-  return items.slice(0, 5).map(m => parseItem(m[1], source)).filter(Boolean);
+  return items
+    .slice(0, MAX_ITEMS_PER_FEED)
+    .map(m => parseItem(m[1], source))
+    .filter(Boolean);
 }
 
 function parseItem(item, source) {
@@ -179,6 +185,8 @@ function parseItem(item, source) {
   ).slice(0, 180).trim();
 
   if (!title || !url) return null;
+  // Substack auto-creates a "/p/coming-soon" welcome stub per publication.
+  if (/\/p\/coming-soon\/?$/i.test(url)) return null;
 
   return {
     title, url, date, image, description: desc,
