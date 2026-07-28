@@ -57,6 +57,21 @@ def _json_ld_date(html):
     return m.group(1) if m else ""
 
 
+def _json_ld_author(html):
+    """
+    Pull the JSON-LD author name, e.g. "Michael Hansen, PhD".
+
+    Needed by the discovery path: the public profile page can surface OTHER
+    people's articles, and publishing one of those as the site owner's would be
+    a real misattribution. The author object nests (it carries an `image` and an
+    `interactionStatistic` sub-object), so allow one level of nesting before
+    "name" rather than using a naive [^}]* class.
+    """
+    m = re.search(r'"author"\s*:\s*\{(?:[^{}]|\{[^{}]*\})*?"name"\s*:\s*"([^"]+)"',
+                  html, re.DOTALL)
+    return _unescape(m.group(1)).strip() if m else ""
+
+
 def _unescape(text):
     import html as _h
     return _h.unescape(text)
@@ -89,6 +104,9 @@ def fetch_article(url, timeout=30):
         "date": _json_ld_date(html) or _meta(html, "article:published_time"),
         "image": _meta(html, "og:image") or None,
         "description": _meta(html, "og:description"),
+        # Consumed by the discovery authorship guard in linkedin_sync; normalise()
+        # builds the site schema explicitly, so this extra key never reaches KV.
+        "author": _json_ld_author(html),
     }
 
 
