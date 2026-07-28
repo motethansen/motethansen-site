@@ -3,9 +3,13 @@ main            = "worker.js"
 compatibility_date = "2024-01-01"
 account_id      = "f999794776f99de37612b4abbfbfc21a"
 
-# Cron triggers — runs daily at 20:00 UTC (after typical publishing window)
+# Cron triggers — hourly. This is what makes a new Substack post show up on the
+# site by itself: there is no webhook from Substack, so freshness == poll rate.
+# Daily (the old "0 20 * * *") meant a post could sit invisible for ~24h.
+# Each run is 2 RSS fetches; the per-source snapshots in shared/feed-core.js
+# absorb the intermittent Substack blocks that polling more often will surface.
 [triggers]
-crons = ["0 20 * * *"]
+crons = ["0 * * * *"]
 
 [[kv_namespaces]]
 binding = "SITE_KV"
