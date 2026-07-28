@@ -25,18 +25,37 @@ functions/
   _middleware.js      — host-based routing: michael.motethansen.com → /resume/ (ASSETS rewrite)
   api/
     contact.js        — contact form handler → Resend API → hansenmichaelmotet@gmail.com
-    writing.js        — feed aggregator: live Substack RSS + LinkedIn (from KV). Cache key: writing-feed-v4 (6h).
+    writing.js        — thin HTTP layer over shared/feed-core.js. Serves writing-feed-v4 from KV, else rebuilds.
                         ?all=1 returns full list; default returns top 9. Response includes { posts, total, cached }.
+                        ?debug=1 forces a live rebuild and returns per-source status (never writes the merged cache).
     publications.js   — (legacy stub, ORCID now fetched client-side in JS)
+
+shared/
+  feed-core.js        — SINGLE source of truth for feed fetch/parse/merge/cache, imported by BOTH the Pages
+                        Function and the cron Worker. Holds SOURCES, the RSS parser, per-source fallback,
+                        and the cache-write guard. Do not fork this logic back into the entry points.
 
 workers/
   feed-refresh/
-    worker.js         — scheduled cron Worker (0 20 * * * UTC), writes KV with 30h backstop TTL
+    worker.js         — scheduled cron Worker (HOURLY, 0 * * * * UTC); thin wrapper over shared/feed-core.js.
+                        GET /refresh?secret=…[&verbose=1] for a manual rebuild + per-source report.
+                        Fails closed — REFRESH_SECRET is a Worker secret; the value is in .env
+                        as FEED_REFRESH_SECRET.
     wrangler.toml     — Worker config, KV binding SITE_KV
 
-linkedin-sync/        — Python job (runs on DigitalOcean droplet, daily cron) — scrapes LinkedIn → KV key linkedin-posts-v1
+scripts/
+  warm-feed-cache.mjs — fetches each Substack feed FROM THIS MACHINE and writes the per-source snapshots
+                        to KV. Run before busting the merged cache (deploy.sh does this automatically).
+                        --dry-run to fetch and report without writing.
+  test-feed-fallback.mjs — simulates a blocked publication (network failure, 200 challenge page, no
+                        snapshot) and asserts the fallback + cache-write guard hold. Needs network.
+
+linkedin-sync/        — Python job on the DigitalOcean droplet (206.189.153.183), systemd timer 05:30 + 17:30 UTC.
+                        Discovers new articles → fetches public metadata → merges → KV key linkedin-posts-v1
   linkedin_sync.py    — CLI + run() core: collect → normalise → merge (union by URL) → write KV.
                         Flags: --engine {auto,http,playwright}, --capture/--from-capture, --from-file, --dry-run, --print, --test-alert
+  linkedin_discover.py— finds NEW articles on the PUBLIC profile page (no cookie). Rate-limited per IP:
+                        retries 4x with spaced jittered backoff, best-effort, never fatal.
   linkedin_source.py  — fragile fetch layer. Adaptive: HTTP (Voyager + JSON-LD) then Playwright fallback. Split fetch/parse.
   linkedin_playwright.py — headless Chromium engine (lazy import); JSON-LD + DOM (a[href*="/pulse/"]) extraction
   notify.py           — best-effort Resend failure-alert email (reuses site's Resend sender)
@@ -46,7 +65,7 @@ linkedin-sync/        — Python job (runs on DigitalOcean droplet, daily cron) 
   README.md           — droplet deploy + adaptive-engine/capture/alerting workflow
 
 wrangler.toml         — Pages project config, KV binding SITE_KV
-deploy.sh             — manual deploy script (unsets CF_* vars, wrangler pages deploy + wrangler deploy, busts KV)
+deploy.sh             — manual deploy: pages deploy + worker deploy → warm snapshots → bust KV → verify (fails loud if incomplete)
 .env                  — GITIGNORED master key file (all API keys)
 .scrum/               — sprint records and backlog
 ```
@@ -55,8 +74,12 @@ deploy.sh             — manual deploy script (unsets CF_* vars, wrangler pages
 ```bash
 bash deploy.sh
 ```
-Deploys both the Pages site and the feed-refresh Worker, then deletes KV key
-`writing-feed-v4` to force a fresh rebuild on the next request.
+Deploys the Pages site and the feed-refresh Worker, warms the per-source feed
+snapshots from this machine, deletes KV key `writing-feed-v4` to force a fresh
+rebuild, then verifies the rebuild and **exits non-zero if any publication is
+missing**. The warm step runs before the bust on purpose: Substack sometimes
+blocks Cloudflare egress, so a rebuild triggered by the bust can fail to fetch a
+feed this machine gets fine — the snapshots are what keep it in the feed.
 **No GitHub auto-deploy** — always deploy manually from this machine.
 
 ## Environment variables (set in Cloudflare Pages dashboard)
@@ -82,20 +105,56 @@ The `linkedin-sync/` job has its own `.env` (see `linkedin-sync/.env.example`) w
   seed when empty. The `linkedin-sync/` DO job populates that key, so new LinkedIn
   articles appear with no redeploy. (LinkedIn has no public article API — that job is
   the only way to automate it.)
-- **KV cache strategy + poison guard**: the Worker (cron, 20:00 UTC) and the Pages
-  Function both write the FULL merged list to `writing-feed-v4`. Critical rule:
-  **only cache a "healthy" build** (≥1 Substack feed loaded). A build where every
-  Substack fetch fails is served but never persisted — this prevents a transient
-  Substack outage from poisoning the cache with a LinkedIn-only feed (the bug that
-  hid all Substack posts). Worker write also carries a 30h backstop TTL so any bad
-  state self-heals instead of sticking forever.
-- **Substack edge-fetch**: `fetchFeed` (in `functions/api/writing.js` and the
-  Worker) requests the RSS feeds with a **real browser User-Agent** and **no
-  `cf: { cacheEverything }`**. Substack blocks bot-ish UAs from Cloudflare egress,
-  and `cacheEverything` could pin that block response at the edge — which made the
-  live feed return 0 Substack posts. KV is the only cache layer; the edge does no
-  subrequest caching. If Substack ever hard-blocks Cloudflare IPs, the fallback is
-  to route these fetches through a proxy (the guard keeps that failure graceful).
+- **One feed core, two callers**: `shared/feed-core.js` is imported by both the Pages
+  Function and the cron Worker. They used to carry byte-identical copies behind
+  "keep in sync" comments, and they drifted — the per-feed item cap got fixed in one
+  copy only. Never fork this logic back into the entry points.
+- **KV cache strategy — per-source fallback**: the Worker (cron, 20:00 UTC) and the
+  Pages Function both write the FULL merged list to `writing-feed-v4`. Each source
+  ALSO keeps its own last-known-good snapshot under `feed-src-v1:<sourceId>` (14d TTL).
+  On rebuild, a source that fails — or that returns 200 but parses to **0 items**, i.e.
+  a challenge page — is served from its snapshot rather than silently dropped. Rules:
+  - a build is **complete** only when *every* source contributed posts;
+  - only a complete build is cached (6h TTL; **30min** if any source came from a
+    snapshot, so it retries upstream soon instead of coasting);
+  - an incomplete build is served but never persisted.
+  The old guard only required "≥1 Substack feed loaded", so a build where Urban Life
+  Works was blocked but Vizneo succeeded counted as healthy and cached a feed missing
+  a whole publication for 30h. That was the "Substack articles disappeared" bug.
+- **Substack edge-fetch**: `fetchFeed` requests the RSS feeds with a **real browser
+  User-Agent**, **no `cf: { cacheEverything }`**, and one retry. Substack blocks
+  bot-ish UAs from Cloudflare egress *intermittently and per publication*, and
+  `cacheEverything` could pin that block response at the edge. KV is the only cache
+  layer; the edge does no subrequest caching. If Substack ever hard-blocks Cloudflare
+  IPs entirely, the snapshots keep the site correct for 14 days — after that, either
+  re-run `scripts/warm-feed-cache.mjs` or route the fetches through a proxy.
+- **Diagnosing a missing publication**: `curl https://motethansen.com/api/writing?debug=1`
+  → per-source `status` (`live` / `snapshot` / `missing`), counts, and the fetch error.
+  This bypasses the merged cache and writes nothing, so it is safe to hit any time.
+- **How new posts reach the site (freshness budget)**: nothing pushes to this site —
+  every path is polling, so latency == poll rate.
+  - **Substack: fully automatic.** Cron Worker polls hourly → new post live within ~1h.
+  - **LinkedIn: automatic, twice a day, on the droplet.** `linkedin_discover.py`
+    reads the **public profile page** (no login cookie — the `/pulse/` links are in
+    the HTML) and hands new URLs to the existing metadata+KV pipeline. After a KV
+    write that changed the count it pings the Worker `/refresh`, so the site updates
+    in seconds rather than waiting for the hourly cron.
+  - **Why only twice a day** (measured 2026-07-28): that profile page is aggressively
+    **rate limited per IP**. Identical requests from the droplet went 200 (fresh) →
+    2/12 (after ~30 requests) → 0/12 (after ~60), for curl and Python alike; it
+    recovers once the IP is quiet. So polling more often makes discovery *less*
+    reliable. `linkedin_discover.fetch_profile` retries 4× with spaced, jittered
+    backoff to get past the probabilistic wall — verified working from a throttled
+    IP (attempts 1–2 walled, 3rd succeeded).
+  - **Cloudflare Workers egress is blocked outright** (HTTP 999) — that is why
+    discovery cannot live in the feed-refresh Worker. The droplet is fine.
+  - Discovery is **best-effort**: if it's walled for a whole run, the job continues
+    with `article-urls.txt` and just doesn't find new articles that time.
+  - **Authorship guard**: the profile page can surface other people's posts, so a
+    discovered article is only published if its JSON-LD author matches
+    `LINKEDIN_AUTHOR_MATCH` (default `hansen`); curated URLs are trusted as-is.
+  - Want it live immediately instead of waiting for the next run:
+    `docker compose run --rm sync --add-url "https://www.linkedin.com/pulse/…"`
 - **Archive page**: `/writing/` lists all articles with client-side search;
   homepage shows top 9 and links to it via a "View all N articles" button when total > 9.
 - **Favicon**: SVG only (`/favicon.svg`) — works in all modern browsers and scales cleanly.
