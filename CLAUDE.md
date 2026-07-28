@@ -61,6 +61,9 @@ linkedin-sync/        — Python job on the DigitalOcean droplet (206.189.153.18
   notify.py           — best-effort Resend failure-alert email (reuses site's Resend sender)
   articles.sample.json— starter data for --from-file (also the seed source of truth)
   deploy/             — setup.sh (venv/deps/cron; --with-playwright), run.sh (cron entrypoint), systemd/ units
+                        sync-from-git.sh — bring the droplet's checkout to origin/main + rebuild.
+                        Preserves .env and UNIONS article-urls.txt (live data, often ahead of git).
+                        --dry-run to preview, --no-build to skip the image rebuild.
   tests/              — pytest: transform, notify, parsers, capture round-trip, real-browser DOM (auto-skips)
   README.md           — droplet deploy + adaptive-engine/capture/alerting workflow
 
@@ -81,6 +84,16 @@ missing**. The warm step runs before the bust on purpose: Substack sometimes
 blocks Cloudflare egress, so a rebuild triggered by the bust can fail to fetch a
 feed this machine gets fine — the snapshots are what keep it in the feed.
 **No GitHub auto-deploy** — always deploy manually from this machine.
+
+The droplet is a **real git checkout** at `/opt/motethansen-site`, tracking `origin/main`
+over **HTTPS** (the repo is public; the droplet has no GitHub key, and its old SSH remote
+failed with `Host key verification failed`). To update it:
+```bash
+ssh root@206.189.153.183 'cd /opt/motethansen-site && bash linkedin-sync/deploy/sync-from-git.sh'
+```
+It previously ran hand-copied files while the checkout sat pinned at an old commit — the
+code running was not the code in git and nothing surfaced that. Don't edit code on the
+droplet; commit, then sync.
 
 ## Environment variables (set in Cloudflare Pages dashboard)
 | Variable | Purpose |

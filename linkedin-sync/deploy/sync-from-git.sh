@@ -32,14 +32,33 @@ if [ "${_SYNC_RELAUNCHED:-}" != "1" ]; then
   _copy="$(mktemp /tmp/sync-from-git.XXXXXX.sh)"
   cp "$0" "$_copy"
   export _SYNC_RELAUNCHED=1
+  # Remember where the real script lives — the copy in /tmp can't derive it.
+  _SYNC_ORIGIN_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../.." 2>/dev/null && pwd || true)"
+  export _SYNC_ORIGIN_DIR
   trap 'rm -f "$_copy"' EXIT
   bash "$_copy" "$@"
   exit $?
 fi
 
-REPO="$(cd "$(dirname "$(readlink -f "$0")")/../.." 2>/dev/null && pwd || echo /opt/motethansen-site)"
-[ -d "$REPO/.git" ] || { echo "error: $REPO is not a git checkout" >&2; exit 1; }
+# Resolve the checkout, most-explicit first. Deriving it from $0 alone is wrong:
+# this script re-execs from /tmp (see above), where "$0/../.." resolves to /.
+#   1. $SYNC_REPO override
+#   2. the git checkout containing the current directory
+#   3. relative to the ORIGINAL script location, when invoked from inside the repo
+#   4. the known deploy path
+for candidate in \
+    "${SYNC_REPO:-}" \
+    "$(git rev-parse --show-toplevel 2>/dev/null || true)" \
+    "${_SYNC_ORIGIN_DIR:-}" \
+    "/opt/motethansen-site"; do
+  if [ -n "$candidate" ] && [ -d "$candidate/.git" ]; then REPO="$candidate"; break; fi
+done
+if [ -z "${REPO:-}" ]; then
+  echo "error: no git checkout found. Run from inside it, or set SYNC_REPO=/path/to/repo" >&2
+  exit 1
+fi
 cd "$REPO"
+echo "▶ Checkout: $REPO"
 
 URLS="linkedin-sync/article-urls.txt"
 BUILD=1; DRY=0
