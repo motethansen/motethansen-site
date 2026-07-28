@@ -33,6 +33,7 @@ Config comes from environment variables (see .env.example):
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 
@@ -64,6 +65,14 @@ def load_env():
         "profile": os.environ.get("LINKEDIN_PROFILE", "michaelmotethansen"),
         "li_at": os.environ.get("LINKEDIN_LI_AT", ""),
         "jsessionid": os.environ.get("LINKEDIN_JSESSIONID", ""),
+        # Authorship guard for discovered articles — a regex matched against the
+        # article's JSON-LD author name. Empty disables the check (not advised:
+        # the profile page can surface other people's posts).
+        "author_match": os.environ.get("LINKEDIN_AUTHOR_MATCH", "hansen"),
+        # Optional: ping the feed-refresh Worker after a KV write so the site
+        # updates in seconds instead of waiting for its hourly cron.
+        "refresh_url": os.environ.get("FEED_REFRESH_URL", ""),
+        "refresh_secret": os.environ.get("FEED_REFRESH_SECRET", ""),
     }
 
 
@@ -185,8 +194,9 @@ def collect_articles(cfg, args):
             raise ConfigError(f"{args.from_file} must contain a JSON array of articles")
         return raw
     # URL-driven public fetch — the primary path. Reads article URLs from --url
-    # and/or a urls file, then fetches each article's public metadata (no cookie).
-    urls = _resolve_urls(args)
+    # and/or a urls file, plus anything discovered on the public profile page,
+    # then fetches each article's public metadata (no cookie).
+    urls, discovered = _resolve_urls(args, cfg)
     if urls is not None:
         import linkedin_public
         articles, errors = linkedin_public.fetch_articles(urls)
@@ -196,6 +206,13 @@ def collect_articles(cfg, args):
             raise ScrapeEmptyError(
                 "all article URLs failed to fetch:\n  "
                 + "\n  ".join(f"{u}: {e}" for u, e in errors))
+        articles = _keep_owner_articles(articles, discovered, cfg)
+        # Record only URLs that fetched AND passed the authorship guard, so a
+        # transient failure or someone else's post never pollutes the durable list.
+        if discovered:
+            confirmed = [u for u in discovered if _slug(u) in {_slug(a["url"]) for a in articles}]
+            if confirmed:
+                _append_urls(args.urls_file, confirmed)
         return articles
     # Legacy cookie scrape (kept for completeness; LinkedIn walls the listing
     # from datacentre IPs, so this usually returns nothing there). Import lazily.
@@ -205,15 +222,35 @@ def collect_articles(cfg, args):
         engine=args.engine, capture_dir=args.capture)
 
 
-def _resolve_urls(args):
-    """Return the list of article URLs to fetch, or None if this isn't a URL run.
+def _slug(url):
+    """The stable /pulse/<slug> identity of an article URL ('' if not one)."""
+    m = re.search(r"/pulse/([a-z0-9][a-z0-9-]*)", (url or ""), re.IGNORECASE)
+    return m.group(1).lower() if m else ""
 
-    Sources, in order: explicit --url values, an explicit --urls-file, else the
-    DEFAULT_URLS_FILE if it exists (so the scheduled run just works). A URL run is
-    also implied whenever --url is given. Returns None only when there are no URLs
-    anywhere and no scrape-suppressing flags — i.e. fall back to the legacy scrape.
+
+def _resolve_urls(args, cfg):
+    """Return (urls_to_fetch, discovered_urls) — or (None, set()) for a scrape run.
+
+    Sources, in order: URLs discovered on the public profile page, explicit --url
+    values, an explicit --urls-file, else DEFAULT_URLS_FILE if it exists (so the
+    scheduled run just works). Returns None only when there are no URLs anywhere
+    and no scrape-suppressing flags — i.e. fall back to the legacy scrape.
+
+    Discovery is what lets a NEWLY published article reach the site with no manual
+    step. It is best-effort: if LinkedIn walls this network the run continues with
+    the durable list, because a discovery outage must not stop the metadata
+    refresh for articles we already know about.
     """
-    urls = list(args.url or [])
+    discovered = []
+    if not args.no_discover:
+        import linkedin_discover
+        try:
+            discovered = linkedin_discover.discover_urls(cfg["profile"])
+            print(f"discovered {len(discovered)} article URL(s) on the public profile page")
+        except linkedin_discover.DiscoveryError as exc:
+            print(f"discovery unavailable ({exc}) — continuing with the durable URL list")
+
+    urls = list(discovered) + list(args.url or [])
     path = args.urls_file or (DEFAULT_URLS_FILE if os.path.exists(DEFAULT_URLS_FILE) else None)
     if path:
         if not os.path.exists(path):
@@ -221,13 +258,45 @@ def _resolve_urls(args):
         with open(path, "r", encoding="utf-8") as fh:
             urls += [ln.strip() for ln in fh if ln.strip() and not ln.lstrip().startswith("#")]
     if not urls:
-        return None
-    # De-dupe, preserve order.
+        return None, set()
+    # De-dupe by article identity, preserving order. Keying on the slug (not the
+    # raw string) stops a trailing-slash variant being fetched twice.
     seen, out = set(), []
     for u in urls:
-        if u not in seen:
-            seen.add(u); out.append(u)
-    return out
+        key = _slug(u) or u
+        if key not in seen:
+            seen.add(key); out.append(u)
+    return out, set(discovered)
+
+
+def _keep_owner_articles(articles, discovered, cfg):
+    """
+    Drop discovered articles that someone else wrote.
+
+    The public profile page surfaces reshares and recommendations, so a /pulse/
+    link on it is not proof of authorship. Articles from the curated list are
+    trusted as-is — only discovered ones are screened. An article with no JSON-LD
+    author falls back to requiring the owner's name in the URL slug, since
+    LinkedIn builds article slugs from the author's name.
+    """
+    if not discovered:
+        return articles
+    pattern = cfg.get("author_match") or ""
+    discovered_slugs = {_slug(u) for u in discovered}
+    kept = []
+    for a in articles:
+        slug = _slug(a.get("url", ""))
+        if slug not in discovered_slugs:
+            kept.append(a)                      # curated URL — trusted
+            continue
+        author = (a.get("author") or "").strip()
+        haystack = author or slug
+        if pattern and not re.search(pattern, haystack, re.IGNORECASE):
+            print(f"  skip {a.get('url')} — author {author or '(unknown)'!r} "
+                  f"does not match /{pattern}/i")
+            continue
+        kept.append(a)
+    return kept
 
 
 def _offline(args):
@@ -284,7 +353,35 @@ def run(cfg, args):
 
     kv_write(cfg, merged)
     print(f"wrote {len(merged)} article(s) to KV key '{KV_KEY}'")
+    if len(merged) != len(existing):
+        _ping_refresh(cfg)
     return merged
+
+
+def _ping_refresh(cfg):
+    """
+    Nudge the feed-refresh Worker to rebuild now.
+
+    The site caches the merged feed, so without this a new article waits for the
+    Worker's hourly cron. Best-effort by design: the KV write already succeeded
+    and the cron is the backstop, so a failure here is logged, never raised.
+    Only called when the article count actually changed — no point rebuilding
+    the feed on the many runs that find nothing new.
+    """
+    url, secret = cfg.get("refresh_url"), cfg.get("refresh_secret")
+    if not url or not secret:
+        print("refresh ping skipped (FEED_REFRESH_URL/FEED_REFRESH_SECRET unset) — "
+              "the site picks this up on the next hourly cron")
+        return
+    try:
+        resp = requests.get(url, params={"secret": secret}, timeout=60)
+        if resp.ok:
+            body = resp.json()
+            print(f"refreshed site feed now — {body.get('count')} posts live")
+        else:
+            print(f"refresh ping -> HTTP {resp.status_code} (hourly cron will catch up)")
+    except Exception as exc:  # noqa: BLE001 — never fail the run over the ping
+        print(f"refresh ping failed ({exc}) — hourly cron will catch up")
 
 
 # ── CLI ───────────────────────────────────────────────
@@ -306,6 +403,9 @@ def parse_args():
                     help="parse articles from a previous --capture dir, offline (no network)")
     ap.add_argument("--capture", metavar="DIR",
                     help="save every raw LinkedIn response to DIR for inspection")
+    ap.add_argument("--no-discover", action="store_true",
+                    help="skip public-profile discovery of new articles; use only "
+                         "--url / the urls file")
     ap.add_argument("--engine", choices=["auto", "http", "playwright"], default="auto",
                     help="LinkedIn fetch engine (default: auto = HTTP, then Playwright fallback)")
     ap.add_argument("--dry-run", action="store_true",
