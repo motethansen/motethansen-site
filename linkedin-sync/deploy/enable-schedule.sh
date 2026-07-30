@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Go-live: install + start the systemd timer that runs the Dockerised sync daily
-# at 05:30 UTC. The schedule is OPT-IN — nothing scrapes on a timer until you run
-# this. Undo anytime with disable-schedule.sh.
+# Go-live: install + start the systemd timer that runs the Dockerised sync twice
+# daily (05:30 + 17:30 UTC, +/-15min jitter — see the .timer unit). The schedule is
+# OPT-IN: nothing runs on a timer until you run this. Undo with disable-schedule.sh.
 #
 # Idempotent: safe to re-run (e.g. after `git pull`). Must run as root (sudo).
 #
@@ -34,7 +34,7 @@ EOF
 systemctl daemon-reload
 systemctl enable --now "$UNIT.timer"
 
-echo "✓ scheduled: $UNIT.timer (daily 05:30 UTC). Scraping is now ON."
+echo "✓ scheduled: $UNIT.timer (05:30 + 17:30 UTC). Sync is now ON."
 echo "  next run:  systemctl list-timers $UNIT.timer"
 echo "  run now:   sudo systemctl start $UNIT.service"
 echo "  logs:      journalctl -u $UNIT.service -n 50 --no-pager"

@@ -51,7 +51,7 @@ scripts/
   test-feed-fallback.mjs — simulates a blocked publication (network failure, 200 challenge page, no
                         snapshot) and asserts the fallback + cache-write guard hold. Needs network.
 
-linkedin-sync/        — Python job on the DigitalOcean droplet (206.189.153.183), systemd timer 05:30 + 17:30 UTC.
+linkedin-sync/        — Python job on the WD-Ubuntu droplet (188.166.215.225), systemd timer 05:30 + 17:30 UTC.
                         Discovers new articles → fetches public metadata → merges → KV key linkedin-posts-v1
   linkedin_sync.py    — CLI + run() core: collect → normalise → merge (union by URL) → write KV.
                         Flags: --engine {auto,http,playwright}, --capture/--from-capture, --from-file, --dry-run, --print, --test-alert
@@ -88,12 +88,24 @@ fetched the feeds locally and busted the KV key from here; that made a laptop pa
 of production and is gone.
 **No GitHub auto-deploy** — always deploy manually from this machine.
 
-The droplet is a **real git checkout** at `/opt/motethansen-site`, tracking `origin/main`
-over **HTTPS** (the repo is public; the droplet has no GitHub key, and its old SSH remote
-failed with `Host key verification failed`). To update it:
+### Droplets
+| Host | IP | Role |
+|---|---|---|
+| **WD-Ubuntu** | 188.166.215.225 | **runs `linkedin-sync`** (timer 05:30 + 17:30 UTC) |
+| Vizneo-docker | 206.189.153.183 | budgetapp-api, edge-traefik. Sync **retired** here 2026-07-30 (checkout kept as a fallback) |
+
+The service moved because the Vizneo IP had been heavily rate limited by LinkedIn;
+WD-Ubuntu answered 6/6 clean. Both are real git checkouts at `/opt/motethansen-site`
+tracking `origin/main` over **HTTPS** (the repo is public and neither droplet has a
+GitHub key — the old SSH remote failed with `Host key verification failed`).
+
+Update the active host with:
 ```bash
-ssh root@206.189.153.183 'cd /opt/motethansen-site && bash linkedin-sync/deploy/sync-from-git.sh'
+ssh root@188.166.215.225 'cd /opt/motethansen-site && bash linkedin-sync/deploy/sync-from-git.sh'
 ```
+Only ONE host may have the timer enabled. Check with
+`systemctl is-enabled linkedin-sync-docker.timer` on both; `deploy/disable-schedule.sh`
+turns it off.
 It previously ran hand-copied files while the checkout sat pinned at an old commit — the
 code running was not the code in git and nothing surfaced that. Don't edit code on the
 droplet; commit, then sync.
