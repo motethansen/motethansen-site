@@ -1,15 +1,23 @@
 #!/usr/bin/env node
 /**
- * Warm the per-source feed snapshots in KV from THIS machine.
+ * MANUAL BREAK-GLASS ONLY — warm the per-source feed snapshots in KV.
  *
- * Why this exists: Substack intermittently blocks Cloudflare's egress network,
- * so a rebuild running inside a Worker can fail to fetch a publication that a
- * residential connection fetches fine. shared/feed-core.js falls back to a
- * per-source snapshot in KV when that happens — this script fills those
- * snapshots using the same parser, from a network Substack does serve.
+ * ⚠ This is NOT part of any automated or scheduled path, and must not become
+ * one. It runs on a development machine, and dev machines are not production.
+ * `deploy.sh` used to call it; it no longer does — deploys now ask the
+ * feed-refresh Worker to rebuild on Cloudflare instead.
  *
- * Run it before busting the merged cache (deploy.sh does), and any time a
- * publication has been blocked long enough for its snapshot to expire.
+ * Why it still exists: Substack serves the RSS feeds differently by network —
+ * 200 to a residential IP, **403 to the DigitalOcean droplet**, and
+ * intermittently (200/429) to Cloudflare egress. So a residential machine is the
+ * only place that can reliably refresh these snapshots, and no server we own can
+ * take this over.
+ *
+ * In normal operation you never need this: shared/feed-core.js writes each
+ * source's snapshot on every successful Cloudflare fetch, so they stay fresh on
+ * their own. Reach for this only if `?debug=1` shows a source stuck on
+ * `snapshot` for days and the 14-day snapshot TTL is close to expiring — i.e.
+ * Cloudflare has been blocked long enough that the safety net is running out.
  *
  *   node scripts/warm-feed-cache.mjs           # write snapshots to KV
  *   node scripts/warm-feed-cache.mjs --dry-run # fetch + report only
