@@ -43,10 +43,22 @@ export const SOURCE_CACHE_PREFIX = "feed-src-v1:";
  */
 export const SOURCE_CACHE_TTL = 60 * 60 * 24 * 14; // 14 days
 
-/** Merged-cache TTL when every source was fetched live. */
+/**
+ * Merged-cache TTLs.
+ *
+ * INVARIANT: both MUST exceed the feed-refresh Worker's cron interval (hourly —
+ * see workers/feed-refresh/wrangler.toml). The cron rewrites this key every run,
+ * so a TTL shorter than the interval leaves an uncached window in which EVERY
+ * visitor request rebuilds and re-fetches every upstream feed.
+ *
+ * That bug shipped: DEGRADED was 30min against an hourly cron, so for ~30 minutes
+ * of every hour each visitor cost 2 Substack requests. Substack started answering
+ * HTTP 429 (2026-07-30). The cron is already the retry mechanism — a short TTL
+ * buys nothing but load.
+ */
 export const CACHE_TTL = 60 * 60 * 6; // 6 hours
-/** Merged-cache TTL when any source came from a snapshot — retry upstream sooner. */
-export const CACHE_TTL_DEGRADED = 60 * 30; // 30 minutes
+/** Degraded builds still get a full cache window; 90min = hourly cron + margin. */
+export const CACHE_TTL_DEGRADED = 60 * 90; // 90 minutes
 
 /**
  * Per-feed safety bound. Substack serves a publication's whole archive in its
