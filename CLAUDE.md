@@ -215,7 +215,11 @@ see `linkedin-sync/.env.example`) with `CF_ACCOUNT_ID`, `CF_KV_NAMESPACE_ID`,
 ## Agents & machines
 | Agent | Model | Machine | Role |
 |---|---|---|---|
-| Claude Code | Claude Sonnet 4.6 | MacBook Pro (orchestrator) | Primary dev agent — all code, deploy |
+| Claude Code | Claude Opus 5 (1M context) | MacBook Pro (development only) | Dev agent — code, deploy |
+| Codex | Codex Sonnet 4.6 | MacBook Pro (development only) | Dev agent — code, deploy |
+
+Machines are for **development only** — production runs on the droplets and
+Cloudflare. Update the model column when you switch models; it goes stale silently.
 
 ## Owner
 Michael Motet Hansen — hansenmichaelmotet@gmail.com
