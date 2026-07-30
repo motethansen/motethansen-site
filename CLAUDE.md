@@ -44,9 +44,10 @@ workers/
     wrangler.toml     — Worker config, KV binding SITE_KV
 
 scripts/
-  warm-feed-cache.mjs — fetches each Substack feed FROM THIS MACHINE and writes the per-source snapshots
-                        to KV. Run before busting the merged cache (deploy.sh does this automatically).
-                        --dry-run to fetch and report without writing.
+  warm-feed-cache.mjs — MANUAL BREAK-GLASS ONLY, never automated. Refreshes the per-source snapshots
+                        from a residential IP. Needed only if a source is stuck on `snapshot` for days
+                        and the 14-day TTL is near expiry. Substack: 200 to residential, 403 to the
+                        droplet, intermittent to Cloudflare — so no server we own can do this.
   test-feed-fallback.mjs — simulates a blocked publication (network failure, 200 challenge page, no
                         snapshot) and asserts the fallback + cache-write guard hold. Needs network.
 
@@ -77,12 +78,14 @@ deploy.sh             — manual deploy: pages deploy + worker deploy → warm s
 ```bash
 bash deploy.sh
 ```
-Deploys the Pages site and the feed-refresh Worker, warms the per-source feed
-snapshots from this machine, deletes KV key `writing-feed-v4` to force a fresh
-rebuild, then verifies the rebuild and **exits non-zero if any publication is
-missing**. The warm step runs before the bust on purpose: Substack sometimes
-blocks Cloudflare egress, so a rebuild triggered by the bust can fail to fetch a
-feed this machine gets fine — the snapshots are what keep it in the feed.
+Deploys the Pages site and the feed-refresh Worker, then asks the Worker to
+rebuild the feed **on Cloudflare** (`/refresh`), and verifies the live result —
+exiting non-zero if any publication is missing.
+
+Nothing about the production data path runs on a dev machine: the rebuild, the
+Substack fetches and the snapshot writes all happen in Cloudflare. Earlier versions
+fetched the feeds locally and busted the KV key from here; that made a laptop part
+of production and is gone.
 **No GitHub auto-deploy** — always deploy manually from this machine.
 
 The droplet is a **real git checkout** at `/opt/motethansen-site`, tracking `origin/main`
