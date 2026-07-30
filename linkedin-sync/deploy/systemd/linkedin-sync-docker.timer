@@ -1,9 +1,21 @@
 [Unit]
-Description=Daily LinkedIn -> Cloudflare KV sync (Docker)
+Description=Twice-daily LinkedIn -> Cloudflare KV sync (Docker)
 
 [Timer]
-# 05:30 UTC daily, before the site's ~06:00 read window.
+# Twice daily. Discovery of NEW articles reads the public LinkedIn profile page,
+# which is aggressively rate limited per source IP (see linkedin_discover.py):
+# polling it often keeps the IP throttled and makes discovery LESS reliable, so
+# this low frequency is deliberate. Two runs halve the worst-case wait for a new
+# article without pushing the IP into the wall.
+#
+# 05:30 sits before the site's ~06:00 read window; 17:30 covers same-day posts.
 OnCalendar=*-*-* 05:30:00 UTC
+OnCalendar=*-*-* 17:30:00 UTC
+
+# Spread the load so we never hit LinkedIn at exactly the same wall-clock minute.
+RandomizedDelaySec=900
+
+# Catch up after downtime rather than skipping a whole half-day.
 Persistent=true
 
 [Install]
