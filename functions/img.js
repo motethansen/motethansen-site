@@ -44,12 +44,19 @@ const CACHE_CONTROL = "public, max-age=604800, stale-while-revalidate=86400";
  * them ourselves (see above) those bytes are our egress, not LinkedIn's, so
  * shrinking them matters more than it did.
  *
- * `cf.image` asks Cloudflare to transform on the fly. **It is a paid feature**
- * (Image Resizing / Images) and, as of 2026-08-07, it is NOT enabled on this
- * zone — `/cdn-cgi/image/...` answers 404. When it is off Cloudflare ignores
- * these options and returns the original, which is exactly today's behaviour,
- * so this is written to be a no-op until someone enables it in the dashboard.
- * No redeploy needed at that point — the bytes just get smaller.
+ * `cf.image` asks Cloudflare to transform on the fly. **Verified working in
+ * production 2026-08-07**: the whole feed went 15.9 MB -> 1.4 MB (-91%), and a
+ * 54 KB PNG cover comes back as a 4.4 KB AVIF at the default width.
+ *
+ * ⚠️ Do not conclude from `/cdn-cgi/image/...` that resizing is unavailable.
+ * That URL answers **404** on this zone while these `cf.image` options work
+ * perfectly — they are two different entry points to the same product and the
+ * URL-based one is not routed here. Testing the URL form first led to exactly
+ * the wrong conclusion once already.
+ *
+ * If the feature is ever disabled, Cloudflare ignores these options and returns
+ * the original, which is simply the pre-resize behaviour — so this stays safe
+ * either way.
  *
  * `fit: scale-down` never upscales, so a source smaller than the target is
  * passed through untouched rather than blown up.
