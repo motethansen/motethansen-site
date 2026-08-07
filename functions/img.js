@@ -37,6 +37,29 @@ const UPSTREAM_TIMEOUT_MS = 8000;
 const CACHE_CONTROL = "public, max-age=604800, stale-while-revalidate=86400";
 
 /**
+ * Resizing.
+ *
+ * These covers are card thumbnails rendered a few hundred pixels wide, and the
+ * originals are not: LinkedIn serves up to ~1.4 MB PNGs. Now that we re-serve
+ * them ourselves (see above) those bytes are our egress, not LinkedIn's, so
+ * shrinking them matters more than it did.
+ *
+ * `cf.image` asks Cloudflare to transform on the fly. **It is a paid feature**
+ * (Image Resizing / Images) and, as of 2026-08-07, it is NOT enabled on this
+ * zone — `/cdn-cgi/image/...` answers 404. When it is off Cloudflare ignores
+ * these options and returns the original, which is exactly today's behaviour,
+ * so this is written to be a no-op until someone enables it in the dashboard.
+ * No redeploy needed at that point — the bytes just get smaller.
+ *
+ * `fit: scale-down` never upscales, so a source smaller than the target is
+ * passed through untouched rather than blown up.
+ */
+const DEFAULT_WIDTH = 640;
+/** Discrete widths only — an open `w` fragments the cache and invites abuse. */
+const ALLOWED_WIDTHS = new Set([320, 480, 640, 960, 1280]);
+const RESIZE_QUALITY = 78;
+
+/**
  * HEAD must be handled explicitly. Without it Pages falls through to the static
  * asset handler and answers `/img` with the site's HTML — so a link checker or
  * crawler is told this route is a text/html page. Same work as GET, no body.
@@ -47,8 +70,12 @@ export async function onRequestHead(ctx) {
 }
 
 export async function onRequestGet({ request, waitUntil }) {
-  const raw = new URL(request.url).searchParams.get("u");
+  const params = new URL(request.url).searchParams;
+  const raw = params.get("u");
   if (!raw) return new Response("missing ?u", { status: 400 });
+
+  const asked = Number(params.get("w"));
+  const width = ALLOWED_WIDTHS.has(asked) ? asked : DEFAULT_WIDTH;
 
   let target;
   try {
@@ -63,8 +90,24 @@ export async function onRequestGet({ request, waitUntil }) {
     return Response.redirect(target.toString(), 302);
   }
 
+  // Pick the output format ourselves rather than using `format: "auto"`, so the
+  // cache key can name the format the response actually is. With "auto" the
+  // bytes vary by Accept while the key does not, and an AVIF gets served to a
+  // browser that asked for JPEG.
+  const accept = request.headers.get("Accept") || "";
+  const format = accept.includes("image/avif")
+    ? "avif"
+    : accept.includes("image/webp")
+      ? "webp"
+      : null;
+
+  // Normalised key: two spellings of the same request (`?u=X` and `?u=X&w=640`
+  // when 640 is the default) must not occupy two cache entries.
+  const keyUrl = new URL(request.url);
+  keyUrl.search =
+    `?u=${encodeURIComponent(target.toString())}&w=${width}&f=${format || "orig"}`;
   const cache = caches.default;
-  const cacheKey = new Request(request.url, { method: "GET" });
+  const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
@@ -75,7 +118,17 @@ export async function onRequestGet({ request, waitUntil }) {
       headers: { Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" },
       redirect: "follow",
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-      cf: { cacheEverything: true, cacheTtl: 604800 },
+      cf: {
+        cacheEverything: true,
+        cacheTtl: 604800,
+        // Ignored (returning the original) on a zone without Image Resizing.
+        image: {
+          width,
+          quality: RESIZE_QUALITY,
+          fit: "scale-down",
+          ...(format ? { format } : {}),
+        },
+      },
     });
   } catch {
     return Response.redirect(target.toString(), 302);
@@ -95,6 +148,9 @@ export async function onRequestGet({ request, waitUntil }) {
       "Cache-Control": CACHE_CONTROL,
       "X-Content-Type-Options": "nosniff",
       "Access-Control-Allow-Origin": "*",
+      // The response format is negotiated from Accept, so shared caches in
+      // front of us must not hand an AVIF to a client that cannot decode it.
+      Vary: "Accept",
     },
   });
 
