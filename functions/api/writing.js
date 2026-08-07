@@ -67,9 +67,42 @@ async function debugResponse(env) {
   });
 }
 
+/**
+ * Hosts whose images we re-serve from our own origin via /img.
+ * `media.licdn.com` is the one that matters: Firefox classes LinkedIn as a
+ * social tracker, so Enhanced Tracking Protection blocks it outright (on by
+ * default in private windows). The Substack hosts are proxied for the same
+ * caching and no-Referer benefit, and so there is one code path, not two.
+ * Keep in sync with the allowlist in functions/img.js.
+ */
+const PROXY_IMAGE_HOSTS = new Set([
+  "media.licdn.com",
+  "substackcdn.com",
+  "substack-post-media.s3.amazonaws.com",
+]);
+
+/**
+ * Rewrite thumbnails to /img at RESPONSE time, never in storage — KV and the
+ * per-source snapshots keep the original URLs, so changing or dropping the
+ * proxy later needs no data migration and loses nothing.
+ */
+function proxyImages(posts) {
+  return posts.map((p) => {
+    if (!p.image) return p;
+    let host;
+    try {
+      host = new URL(p.image).hostname;
+    } catch {
+      return p;
+    }
+    if (!PROXY_IMAGE_HOSTS.has(host)) return p;
+    return { ...p, image: `/img?u=${encodeURIComponent(p.image)}` };
+  });
+}
+
 function feedResponse(fullPosts, wantAll, cached) {
   const posts = wantAll ? fullPosts : fullPosts.slice(0, HOME_LIMIT);
-  return jsonResponse({ posts, total: fullPosts.length, cached });
+  return jsonResponse({ posts: proxyImages(posts), total: fullPosts.length, cached });
 }
 
 function jsonResponse(body, status = 200) {
