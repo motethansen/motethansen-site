@@ -206,6 +206,9 @@
        locked up with the institute name. Composed here, in KU's red (#840404,
        sampled off the seal) and a serif to echo the university's own lockup,
        rather than shipping an invented logo file. */
+    /* This one mark ships with its own filled ground; round it so it reads as a
+       deliberate tile rather than a raw square dropped on the white chip. */
+    .org__logo--tile { border-radius: 5px; }
     .org--lockup { gap: 0.4rem; }
     .org__seal { flex: none; height: 26px; width: auto; }
     .org__lockup-text {
@@ -535,6 +538,7 @@
           <div class="stop__orgs">
             <span class="org org--mark"><img class="org__logo" style="--mh:34px" src="/assets/img/career/pitney-bowes.png" alt="Pitney Bowes" width="238" height="51" decoding="async"></span>
             <span class="org org--mark"><img class="org__logo" style="--mh:34px" src="/assets/img/career/vizneo.svg" alt="Vizneo" decoding="async"></span>
+            <span class="org org--mark"><img class="org__logo org__logo--tile" style="--mh:34px" src="/assets/img/career/vizneo-academy.svg" alt="Vizneo Academy" decoding="async"></span>
             <span class="org org--mark"><img class="org__logo" style="--mh:40px" src="/assets/img/career/winedragons.svg" alt="WineDragons" decoding="async"></span>
             <span class="org org--mark"><img class="org__logo" style="--mh:38px" src="/assets/img/career/jcu.png" alt="James Cook University Singapore" width="147" height="66" decoding="async"></span>
             <span class="org org--mark"><img class="org__logo" style="--mh:40px" src="/assets/img/career/ref-team.png" alt="ref.team" width="161" height="48" decoding="async"></span>
