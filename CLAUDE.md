@@ -210,7 +210,19 @@ see `linkedin-sync/.env.example`) with `CF_ACCOUNT_ID`, `CF_KV_NAMESPACE_ID`,
     `docker compose run --rm sync --add-url "https://www.linkedin.com/pulse/…"`
 - **Archive page**: `/writing/` lists all articles with client-side search;
   homepage shows top 9 and links to it via a "View all N articles" button when total > 9.
-- **Favicon**: SVG only (`/favicon.svg`) — works in all modern browsers and scales cleanly.
+- **Brand mark**: the smart-city bulb, `public/assets/img/logo-smartcity.png` (512px, transparent).
+  The source art had an opaque white square; the exterior white is flood-filled to alpha 0 while the
+  white *inside* the glass is kept, so the mark sits on the paper background without a card behind it.
+  Shown in the nav, the homepage hero (absolutely positioned in the empty right column — it adds no
+  reflow, and is hidden below 880px), and the footer.
+- **Favicon**: `/favicon.svg` is a hand-simplified redraw of the mark — the real skyline turns to mush
+  below ~24px. `assets/img/favicon-48.png` is the PNG fallback and `assets/img/apple-touch-icon.png`
+  the opaque iOS icon. Regenerate the PNGs from the 512px logo, not from the original artwork.
+- **Light theme (warm paper)**: `--color-bg: #fbfaf7`, cards white, ink `#16233a` and `#2f5a84`
+  sampled off the bulb. Purple `#6b4fe0` and teal `#0d7d71` are the accents — both were lightened
+  for the old dark theme and had to be *darkened* here to clear 4.5:1 on paper; same for the Substack
+  badge (`#b4430b`, not `#ff6719`). `public/resume/index.html` carries its own copy of these tokens
+  in its inline `<style>`; change both together.
 
 ## Agents & machines
 | Agent | Model | Machine | Role |

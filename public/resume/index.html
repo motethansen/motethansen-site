@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/img/favicon-48.png">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
   <meta name="description" content="Resume / CV — Michael Motet Hansen. Smart City researcher, entrepreneur, and innovation facilitator with 30+ years in technology across Europe and Asia.">
   <meta name="author" content="Michael Motet Hansen">
+  <meta name="theme-color" content="#fbfaf7">
   <meta property="og:title" content="Michael Motet Hansen — Resume / CV">
   <meta property="og:description" content="Partner at ref.team · PhD researcher · Adjunct Lecturer JCU · 30+ years in tech">
   <meta property="og:url" content="https://michael.motethansen.com">
@@ -20,18 +22,21 @@
     /* ── Reset & base ─────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:       #0a0a0f;
-      --bg-alt:   #13131e;
-      --bg-card:  #16161f;
-      --text:     #f0f0f8;
-      --muted:    #9898b0;
-      --soft:     #5a5a72;
-      --border:   rgba(255,255,255,0.07);
-      --border-s: rgba(255,255,255,0.12);
-      --accent:   #7b61ff;
-      --accent-h: #9b86ff;
-      --teal:     #2dd4bf;
-      --gold:     #f4b942;
+      /* Matches the token set in /style.css — warm paper, ink sampled off the bulb mark. */
+      --bg:       #fbfaf7;
+      --bg-alt:   #f3f1ec;
+      --bg-card:  #ffffff;
+      --navy:     #03203c;
+      --navy-mid: #2f5a84;
+      --text:     #16233a;
+      --muted:    #4d5a6e;
+      --soft:     #647084;
+      --border:   rgba(22,35,58,0.10);
+      --border-s: rgba(22,35,58,0.20);
+      --accent:   #6b4fe0;
+      --accent-h: #5539c4;
+      --teal:     #0d7d71;
+      --gold:     #b8791a;
       --radius:   10px;
       --max:      860px;
       --gutter:   1.5rem;
@@ -49,7 +54,7 @@
     /* ── Nav ──────────────────────────────────────── */
     .rn {
       position: sticky; top: 0; z-index: 50;
-      background: rgba(10,10,15,0.85);
+      background: rgba(251,250,247,0.85);
       backdrop-filter: saturate(180%) blur(16px);
       -webkit-backdrop-filter: saturate(180%) blur(16px);
       border-bottom: 1px solid var(--border);
@@ -82,13 +87,13 @@
       content: '';
       position: absolute; inset: 0; pointer-events: none;
       background:
-        radial-gradient(ellipse 70% 80% at 80% -10%, rgba(123,97,255,0.18) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 60% at -10% 100%, rgba(45,212,191,0.1) 0%, transparent 60%);
+        radial-gradient(ellipse 70% 80% at 80% -10%, rgba(107,79,224,0.11) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 60% at -10% 100%, rgba(15,158,142,0.10) 0%, transparent 60%);
     }
     .hero::after {
       content: '';
       position: absolute; inset: 0; pointer-events: none;
-      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-image: radial-gradient(circle, rgba(3,32,60,0.09) 1px, transparent 1px);
       background-size: 26px 26px;
       mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%);
       -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%);
@@ -99,18 +104,18 @@
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.12em; color: var(--teal);
       padding: 0.35rem 0.8rem; border-radius: 999px;
-      border: 1px solid rgba(45,212,191,0.25); background: rgba(45,212,191,0.06);
+      border: 1px solid rgba(13,125,113,0.30); background: rgba(15,158,142,0.09);
       margin-bottom: 1.5rem;
     }
     .hero__name {
       font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 800;
       letter-spacing: -0.04em; line-height: 1.0; margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
     .hero__headline {
       font-size: clamp(1rem, 2vw, 1.2rem); font-weight: 500;
-      color: var(--accent-h); margin-bottom: 1.5rem; letter-spacing: -0.01em;
+      color: var(--accent); margin-bottom: 1.5rem; letter-spacing: -0.01em;
     }
     .hero__links {
       display: flex; flex-wrap: wrap; gap: 0.75rem;
@@ -172,7 +177,7 @@
       color: var(--text); margin-bottom: 0.15rem;
     }
     .tl-role {
-      font-size: 0.875rem; font-weight: 500; color: var(--accent-h);
+      font-size: 0.875rem; font-weight: 500; color: var(--accent);
       margin-bottom: 0.75rem;
     }
     .tl-desc {
@@ -215,8 +220,8 @@
     .orcid-link {
       display: inline-flex; align-items: center; gap: 0.4rem;
       font-size: 0.82rem; font-weight: 600;
-      padding: 0.4rem 0.9rem; border: 1px solid rgba(123,97,255,0.3);
-      border-radius: 999px; background: rgba(123,97,255,0.08); margin-bottom: 1.25rem;
+      padding: 0.4rem 0.9rem; border: 1px solid rgba(107,79,224,0.30);
+      border-radius: 999px; background: rgba(107,79,224,0.08); margin-bottom: 1.25rem;
     }
 
     /* ── Skills ───────────────────────────────────── */
@@ -229,7 +234,7 @@
     .tag {
       font-size: 0.78rem; font-weight: 500;
       padding: 0.25rem 0.65rem; border-radius: 999px;
-      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      background: var(--bg-card); border: 1px solid var(--border);
       color: var(--muted);
     }
 
@@ -262,21 +267,21 @@
       -webkit-appearance: none;
     }
     .cf-input::placeholder { color: var(--soft); }
-    .cf-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(123,97,255,0.15); }
+    .cf-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(107,79,224,0.16); }
     .cf-ta { resize: vertical; min-height: 110px; line-height: 1.6; }
     .cf-footer { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .cf-btn {
       padding: 0.75rem 1.5rem; font-size: 0.9rem; font-weight: 600;
       font-family: inherit; border: none; border-radius: 8px; cursor: pointer;
-      background: linear-gradient(135deg, var(--accent) 0%, #5b3fd4 100%);
-      color: #fff; box-shadow: 0 0 16px rgba(123,97,255,0.3);
+      background: linear-gradient(135deg, var(--accent) 0%, #5539c4 100%);
+      color: #fff; box-shadow: 0 6px 16px rgba(107,79,224,0.20);
       transition: opacity 150ms, transform 150ms;
     }
     .cf-btn:hover { opacity: 0.9; transform: translateY(-1px); }
     .cf-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
     .cf-status { font-size: 0.875rem; font-weight: 500; }
     .cf-ok  { color: var(--teal); }
-    .cf-err { color: #f87171; }
+    .cf-err { color: #b91c1c; }
 
     /* ── Footer ───────────────────────────────────── */
     .rfooter {
@@ -585,7 +590,7 @@
           <label class="cf-label" for="rc-msg">Message</label>
           <textarea class="cf-input cf-ta" id="rc-msg" name="message" rows="4" placeholder="What would you like to discuss?" required></textarea>
         </div>
-        <div class="cf-turnstile" data-sitekey="0x4AAAAAADQVbWt6YPm-aCnL" data-theme="dark"></div>
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAADQVbWt6YPm-aCnL" data-theme="light"></div>
         <div class="cf-footer">
           <button class="cf-btn" type="submit" id="rc-submit">Send message</button>
           <span class="cf-status" id="rc-status" aria-live="polite"></span>

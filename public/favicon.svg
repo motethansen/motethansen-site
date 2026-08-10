@@ -1,27 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Michael Motet Hansen</title>
+  <!--
+    Simplified redraw of the smart-city bulb mark. The full-detail artwork lives at
+    /assets/img/logo-smartcity.png; that skyline turns to mush below ~24px, so the
+    favicon keeps only the silhouette, the glass, and five towers.
+  -->
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7b61ff"/>
-      <stop offset="100%" stop-color="#2dd4bf"/>
-    </linearGradient>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#13131f"/>
-      <stop offset="100%" stop-color="#0d0d18"/>
-    </linearGradient>
+    <clipPath id="glass">
+      <circle cx="16" cy="12" r="7.9"/>
+    </clipPath>
   </defs>
-  <!-- Background rounded square -->
-  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
-  <!-- Subtle inner glow -->
-  <rect width="32" height="32" rx="7" fill="none" stroke="url(#grad)" stroke-width="0.75" opacity="0.4"/>
-  <!-- mh monogram -->
-  <text
-    x="16"
-    y="21.5"
-    text-anchor="middle"
-    font-family="Inter, 'Helvetica Neue', Arial, sans-serif"
-    font-size="14"
-    font-weight="700"
-    letter-spacing="-0.5"
-    fill="url(#grad)"
-  >mh</text>
+
+  <!-- paper chip, so the navy mark holds up on dark browser chrome too -->
+  <rect width="32" height="32" rx="7" fill="#fbfaf7"/>
+
+  <g fill="#03203c">
+    <!-- bulb silhouette: glass, neck, screw base -->
+    <circle cx="16" cy="12" r="10"/>
+    <rect x="11.4" y="17.5" width="9.2" height="5.5"/>
+    <rect x="11.5" y="22" width="9" height="7.2" rx="1.7"/>
+  </g>
+
+  <!-- the glass itself -->
+  <circle cx="16" cy="12" r="7.9" fill="#fbfaf7"/>
+
+  <!-- skyline, sitting on the floor of the glass -->
+  <g fill="#03203c" clip-path="url(#glass)">
+    <rect x="8.0"  y="15.6" width="2.2" height="4.3"/>
+    <rect x="10.4" y="13.7" width="2.4" height="6.2"/>
+    <rect x="13.0" y="15.0" width="1.6" height="4.9"/>
+    <rect x="15.7" y="10.2" width="0.6" height="2.0"/>
+    <rect x="14.8" y="11.9" width="2.5" height="8.0"/>
+    <rect x="17.5" y="14.4" width="1.8" height="5.5"/>
+    <rect x="19.5" y="12.7" width="2.3" height="7.2"/>
+    <rect x="22.0" y="15.8" width="1.8" height="4.1"/>
+  </g>
+
+  <!-- screw threads -->
+  <g fill="#fbfaf7">
+    <rect x="11.5" y="24.1" width="9" height="1"/>
+    <rect x="11.5" y="26.3" width="9" height="1"/>
+  </g>
 </svg>
