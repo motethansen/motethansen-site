@@ -218,6 +218,16 @@ see `linkedin-sync/.env.example`) with `CF_ACCOUNT_ID`, `CF_KV_NAMESPACE_ID`,
 - **Favicon**: `/favicon.svg` is a hand-simplified redraw of the mark — the real skyline turns to mush
   below ~24px. `assets/img/favicon-48.png` is the PNG fallback and `assets/img/apple-touch-icon.png`
   the opaque iOS icon. Regenerate the PNGs from the 512px logo, not from the original artwork.
+- **Resume journey banner**: `public/resume/index.html` opens with a rail of seven country
+  stops (flags drawn as inline SVG symbols — flag emoji do not render on Windows). Org marks
+  live in `public/assets/img/career/`, ~52KB for twelve. How they were produced, because it
+  is not reproducible by eye: `.ai` files are PDFs — `pdftocairo -svg`, then
+  `inkscape --export-area-drawing` to crop off the A4 page, then re-add the `viewBox`
+  inkscape drops (without it an `<img>` cannot scale the SVG). Intricate seals (UCPH,
+  Thammasat) are rasterised to 3× PNG — far smaller than their 36–128KB vector originals at
+  a 34px render. Supplied PNGs are trimmed to their bbox and quantised to 128 colours.
+  Marks are bounded by `max-width:100%` + `--mh` rather than a fixed height, because the
+  ratios run 0.69 (DTU) to 4.67 (Pitney Bowes). The banner is hidden in print.
 - **Light theme (warm paper)**: `--color-bg: #fbfaf7`, cards white, ink `#16233a` and `#2f5a84`
   sampled off the bulb. Purple `#6b4fe0` and teal `#0d7d71` are the accents — both were lightened
   for the old dark theme and had to be *darkened* here to clear 4.5:1 on paper; same for the Substack
