@@ -725,6 +725,8 @@ a.pub-item__title:hover {
   object-fit: cover;
   display: block;
   background: var(--color-bg-alt);
+  /* thumbnails with a white background would otherwise bleed into the white card */
+  border-bottom: 1px solid var(--color-border);
 }
 
 .wcard__img--blank {
