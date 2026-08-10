@@ -139,6 +139,101 @@
     .stat__num { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
     .stat__label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--soft); }
 
+    /* ── Journey banner ───────────────────────────── */
+    /* One rail, seven stops, in the order they happened. The route runs off both
+       edges under a mask — the journey started before the page and continues. */
+    .journey {
+      border-bottom: 1px solid var(--border);
+      background:
+        radial-gradient(ellipse 60% 120% at 12% 100%, rgba(107,79,224,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 55% 120% at 88% 0%, rgba(15,158,142,0.08) 0%, transparent 70%),
+        var(--bg-alt);
+      overflow: hidden;
+    }
+    .journey__inner {
+      max-width: 1180px; margin: 0 auto;
+      padding: 2.5rem var(--gutter) 2.25rem;
+    }
+    .journey__eyebrow {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.14em; color: var(--accent); margin-bottom: 0.5rem;
+    }
+    .journey__title {
+      font-size: clamp(1.15rem, 2.4vw, 1.6rem); font-weight: 700;
+      letter-spacing: -0.02em; color: var(--text); margin-bottom: 2rem;
+    }
+
+    .rail {
+      display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+      align-items: stretch; gap: 0.5rem;
+    }
+    .stop {
+      display: flex; flex-direction: column; justify-content: flex-end;
+      align-items: center; gap: 0.7rem; text-align: center;
+      animation: stop-in 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+      animation-delay: calc(var(--i) * 70ms);
+    }
+    @keyframes stop-in { from { opacity: 0; transform: translateY(8px); } }
+
+    .stop__orgs {
+      flex: 1; display: flex; flex-direction: column;
+      justify-content: flex-end; align-items: center; gap: 0.3rem;
+    }
+    .org {
+      font-size: 0.66rem; font-weight: 600; line-height: 1.25;
+      letter-spacing: 0.01em; color: var(--muted);
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.25rem 0.5rem;
+      max-width: 100%;
+    }
+    /* drop-in slot: when a real mark exists, .org carries an <img> instead of text */
+    .org--mark { padding: 0.3rem 0.5rem; }
+    .org__logo { display: block; height: 18px; width: auto; max-width: 100%; }
+
+    /* The pin, and the route running through it. Each pin draws a segment far wider
+       than its column so neighbours overlap into one unbroken line — a solid rule,
+       not dashes, because overlapping dashes fall out of phase and read as mush. */
+    .stop__pin { position: relative; display: flex; padding: 0.35rem 0; }
+    .stop__pin::before {
+      content: ''; position: absolute; z-index: 0;
+      top: 50%; left: -200%; right: -200%; height: 2px; margin-top: -1px;
+      background: var(--navy-mid); opacity: 0.35;
+    }
+    /* the route fades out at both ends rather than stopping dead */
+    .stop:first-child .stop__pin::before {
+      mask-image: linear-gradient(to right, transparent 34%, #000 46%);
+      -webkit-mask-image: linear-gradient(to right, transparent 34%, #000 46%);
+    }
+    .stop:last-child .stop__pin::before {
+      mask-image: linear-gradient(to left, transparent 34%, #000 46%);
+      -webkit-mask-image: linear-gradient(to left, transparent 34%, #000 46%);
+    }
+    .flag {
+      position: relative; z-index: 1;
+      width: 34px; height: 23px; display: block;
+      border-radius: 3px; overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(3,32,60,0.14), 0 2px 5px rgba(3,32,60,0.16);
+    }
+    .stop__place {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text);
+    }
+
+    @media (max-width: 820px) {
+      /* the rail keeps its width and scrolls — squashing seven stops loses the route */
+      .rail {
+        grid-auto-columns: minmax(112px, 1fr);
+        overflow-x: auto; scroll-snap-type: x proximity;
+        padding-bottom: 0.5rem; -webkit-overflow-scrolling: touch;
+      }
+      .stop { scroll-snap-align: center; }
+      .journey__inner { padding: 2rem var(--gutter) 1.75rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stop { animation: none; }
+    }
+
     /* ── Layout ───────────────────────────────────── */
     .resume {
       max-width: var(--max); margin: 0 auto;
@@ -308,7 +403,8 @@
     @media print {
       :root { --bg:#fff; --bg-card:#f9f9f9; --bg-alt:#f0f0f0; --text:#000; --muted:#444; --soft:#777; --border:#ddd; --border-s:#bbb; --accent:#5a3fd4; --accent-h:#5a3fd4; }
       body { font-size: 9pt; }
-      .rn, .rfooter, .sec--contact { display: none !important; }
+      /* the banner is decorative on paper, and the experience section states it all */
+      .rn, .rfooter, .sec--contact, .journey { display: none !important; }
       .hero { padding: 1.5rem 0 1rem; border: none; }
       .hero::before, .hero::after { display: none; }
       .hero__name { font-size: 22pt; -webkit-text-fill-color: #000; }
@@ -331,6 +427,107 @@
       </div>
     </div>
   </nav>
+
+  <!-- Flag sprite. Drawn rather than imported: emoji flags do not render on Windows,
+       and an image per flag is seven requests for shapes this simple. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="f-dk" viewBox="0 0 30 20">
+      <rect width="30" height="20" fill="#C8102E"/>
+      <rect x="9" width="4" height="20" fill="#fff"/><rect y="8" width="30" height="4" fill="#fff"/>
+    </symbol>
+    <symbol id="f-ch" viewBox="0 0 30 20">
+      <rect width="30" height="20" fill="#DA291C"/>
+      <rect x="13.2" y="3.6" width="3.6" height="12.8" fill="#fff"/>
+      <rect x="8.6" y="8.2" width="12.8" height="3.6" fill="#fff"/>
+    </symbol>
+    <symbol id="f-ca" viewBox="0 0 30 20">
+      <rect width="30" height="20" fill="#fff"/>
+      <rect width="7.5" height="20" fill="#D52B1E"/><rect x="22.5" width="7.5" height="20" fill="#D52B1E"/>
+      <path fill="#D52B1E" transform="translate(9.5 4.45) scale(0.11)"
+        d="M50 5 58 21 71 14 67 33 84 30 75 44 94 48 79 58 89 72 70 69 73 86 56 77 53 96 50 88 47 96 44 77 27 86 30 69 11 72 21 58 6 48 25 44 16 30 33 33 29 14 42 21Z"/>
+    </symbol>
+    <symbol id="f-mu" viewBox="0 0 30 20">
+      <rect width="30" height="5" fill="#EA2839"/><rect y="5" width="30" height="5" fill="#1A206D"/>
+      <rect y="10" width="30" height="5" fill="#FFD500"/><rect y="15" width="30" height="5" fill="#00A551"/>
+    </symbol>
+    <symbol id="f-sg" viewBox="0 0 30 20">
+      <rect width="30" height="10" fill="#ED2939"/><rect y="10" width="30" height="10" fill="#fff"/>
+      <circle cx="7.2" cy="5" r="3.5" fill="#fff"/><circle cx="9" cy="5" r="2.9" fill="#ED2939"/>
+      <g fill="#fff">
+        <circle cx="11.2" cy="3.25" r="0.55"/><circle cx="12.86" cy="4.46" r="0.55"/>
+        <circle cx="12.23" cy="6.42" r="0.55"/><circle cx="10.17" cy="6.42" r="0.55"/>
+        <circle cx="9.54" cy="4.46" r="0.55"/>
+      </g>
+    </symbol>
+    <symbol id="f-jp" viewBox="0 0 30 20">
+      <rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="6" fill="#BC002D"/>
+    </symbol>
+    <symbol id="f-th" viewBox="0 0 30 20">
+      <rect width="30" height="20" fill="#fff"/>
+      <rect width="30" height="3.34" fill="#A51931"/><rect y="16.66" width="30" height="3.34" fill="#A51931"/>
+      <rect y="6.67" width="30" height="6.66" fill="#2D2A4A"/>
+    </symbol>
+  </svg>
+
+  <section class="journey" aria-labelledby="journey-title">
+    <div class="journey__inner">
+      <p class="journey__eyebrow">Journey</p>
+      <h2 id="journey-title" class="journey__title">Seven countries, four continents.</h2>
+
+      <ol class="rail">
+        <li class="stop" style="--i:0">
+          <div class="stop__orgs">
+            <span class="org">Niels Bohr Institute</span>
+            <span class="org">University of Copenhagen</span>
+            <span class="org">DTU</span>
+            <span class="org">Motorola</span>
+            <span class="org">Maersk</span>
+          </div>
+          <div class="stop__pin"><svg class="flag" aria-hidden="true"><use href="#f-dk"/></svg></div>
+          <span class="stop__place">Denmark</span>
+        </li>
+        <li class="stop" style="--i:1">
+          <div class="stop__orgs"><span class="org">CERN</span></div>
+          <div class="stop__pin"><svg class="flag" aria-hidden="true"><use href="#f-ch"/></svg></div>
+          <span class="stop__place">Switzerland</span>
+        </li>
+        <li class="stop" style="--i:2">
+          <div class="stop__orgs"><span class="org">Pipetronix</span></div>
+          <div class="stop__pin"><svg class="flag" aria-hidden="true"><use href="#f-ca"/></svg></div>
+          <span class="stop__place">Canada</span>
+        </li>
+        <li class="stop" style="--i:3">
+          <div class="stop__orgs">
+            <span class="org">Accenture</span>
+            <span class="org">SWTEAMS</span>
+          </div>
+          <div class="stop__pin"><svg class="flag" aria-hidden="true"><use href="#f-mu"/></svg></div>
+          <span class="stop__place">Mauritius</span>
+        </li>
+        <li class="stop" style="--i:4">
+          <div class="stop__orgs">
+            <span class="org">Pitney Bowes</span>
+            <span class="org">Vizneo</span>
+            <span class="org">WineDragons</span>
+            <span class="org">James Cook University</span>
+            <span class="org">ref.team</span>
+          </div>
+          <div class="stop__pin"><svg class="flag" aria-hidden="true"><use href="#f-sg"/></svg></div>
+          <span class="stop__place">Singapore</span>
+        </li>
+        <li class="stop" style="--i:5">
+          <div class="stop__orgs"><span class="org">Pitney Bowes</span></div>
+          <div class="stop__pin"><svg class="flag" aria-hidden="true"><use href="#f-jp"/></svg></div>
+          <span class="stop__place">Japan</span>
+        </li>
+        <li class="stop" style="--i:6">
+          <div class="stop__orgs"><span class="org">Thammasat University</span></div>
+          <div class="stop__pin"><svg class="flag" aria-hidden="true"><use href="#f-th"/></svg></div>
+          <span class="stop__place">Thailand</span>
+        </li>
+      </ol>
+    </div>
+  </section>
 
   <header class="hero">
     <div class="hero__inner">
