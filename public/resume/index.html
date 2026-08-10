@@ -202,6 +202,18 @@
       display: block; width: auto; height: auto;
       max-width: 100%; max-height: var(--mh, 34px);
     }
+    /* The Niels Bohr Institute has no mark of its own — its identity is the KU seal
+       locked up with the institute name. Composed here, in KU's red (#840404,
+       sampled off the seal) and a serif to echo the university's own lockup,
+       rather than shipping an invented logo file. */
+    .org--lockup { gap: 0.4rem; }
+    .org__seal { flex: none; height: 26px; width: auto; }
+    .org__lockup-text {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 0.56rem; font-weight: 700; line-height: 1.2;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      color: #840404; text-align: left; white-space: nowrap;
+    }
 
     /* The pin, and the route running through it. Each pin draws a segment far wider
        than its column so neighbours overlap into one unbroken line — a solid rule,
@@ -500,7 +512,7 @@
         </li>
         <li class="stop" style="--i:1">
           <div class="stop__orgs">
-            <span class="org org--mark"><img class="org__logo" style="--mh:34px" src="/assets/img/career/niels-bohr.png" alt="Niels Bohr Institute" width="98" height="102" decoding="async"></span>
+            <span class="org org--lockup"><img class="org__seal" src="/assets/img/career/ucph.png" alt="" width="78" height="78" decoding="async"><span class="org__lockup-text">Niels&nbsp;Bohr<br>Institute</span></span>
             <span class="org org--mark"><img class="org__logo" style="--mh:36px" src="/assets/img/career/cern.svg" alt="CERN" decoding="async"></span>
           </div>
           <div class="stop__pin"><svg class="flag" aria-hidden="true"><use href="#f-ch"/></svg></div>
