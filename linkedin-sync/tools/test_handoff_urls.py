@@ -290,3 +290,12 @@ def test_push_failure_does_not_rewrite_history(env, capsys, monkeypatch):
     assert ("push", "origin", "main") in calls
     assert not [c for c in calls if c[0] in ("pull", "rebase", "reset", "merge", "push")
                 and c != ("push", "origin", "main")]
+
+
+@pytest.mark.parametrize("bad", ["bash '", 'bash "unterminated', "echo 'a"])
+def test_malformed_sync_command_is_exit_5_not_a_traceback(bad):
+    """An unbalanced quote in the sync command used to raise ValueError after the push; it must be a normal HandoffError(5)."""
+    env = {handoff.SSH_ENV: "droplet-alias", handoff.SYNC_ENV: bad}
+    with pytest.raises(handoff.HandoffError) as ei:
+        handoff.trigger_sync(env)
+    assert ei.value.code == 5 and ei.value.committed is True

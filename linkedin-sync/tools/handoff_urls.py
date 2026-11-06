@@ -174,7 +174,14 @@ def trigger_sync(env=None):
             raise HandoffError(
                 5, "environment variable %s is not set; the URL is already pushed to origin "
                    "but the droplet was not synced." % name, committed=True)
-    argv = ["ssh", "-o", "BatchMode=yes", alias] + shlex.split(remote_cmd)
+    try:
+        remote_argv = shlex.split(remote_cmd)
+    except ValueError as exc:
+        # a malformed command (for example an unbalanced quote) must not crash after the push: same exit 5 and JSON as every SSH problem
+        raise HandoffError(
+            5, "%s is not a valid command (%s); the URL is already pushed to origin but the droplet was not synced." % (SYNC_ENV, exc),
+            committed=True)
+    argv = ["ssh", "-o", "BatchMode=yes", alias] + remote_argv
     try:
         # Remote progress output must not reach stdout, which is JSON only.
         result = subprocess.run(
