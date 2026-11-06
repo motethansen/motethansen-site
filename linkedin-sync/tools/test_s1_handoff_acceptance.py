@@ -42,7 +42,11 @@ def env(tmp_path):
     bindir.mkdir()
     log = tmp_path / "ssh.log"
     ssh = bindir / "ssh"
-    ssh.write_text('#!/bin/sh\necho "$@" >> "%s"\nexit ${FAKE_SSH_RC:-0}\n' % log)
+    ssh.write_text(
+        '#!/bin/sh\necho "$@" >> "%s"\n'
+        'echo "Fetching origin..."\necho "HEAD is now at abc123 linkedin-sync: add 1"\n'
+        'echo "Building sync image"\necho "{not json"\n'
+        'exit ${FAKE_SSH_RC:-0}\n' % log)
     ssh.chmod(0o755)
     e = dict(os.environ)
     e.update(PATH=str(bindir) + os.pathsep + e["PATH"],
@@ -192,3 +196,10 @@ def test_ssh_failure_keeps_commit_pushed_no_retry(env):
     assert "ssh" in r.stderr.lower() or "sync" in r.stderr.lower()
     assert git(env["origin"], "rev-parse", "main") == head(env["clone"])
     assert len(env["log"].read_text().strip().splitlines()) == 1
+
+
+def test_stdout_is_exactly_one_json_document_despite_remote_progress(env):
+    r = run(env, A)
+    assert r.returncode == 0
+    assert json.loads(r.stdout) == {"added": [A], "committed": True, "synced": True}
+    assert "Fetching origin" in r.stderr  # forwarded, not lost

@@ -237,3 +237,56 @@ def test_multiple_urls_single_commit(env, capsys):
     assert code == 0
     assert out["added"] == [URL_A, URL_B]
     assert env.origin_log()[0] == "linkedin-sync: add 2 article URL(s)"
+
+
+def test_feature_branch_ahead_of_origin_refuses_and_pushes_nothing(env, capsys):
+    git(env.clone, "checkout", "-b", "feature")
+    (env.clone / "unreviewed.txt").write_text("not for production\n")
+    git(env.clone, "add", ".")
+    git(env.clone, "commit", "-m", "unreviewed work")
+    origin_before = env.origin_head()
+    head = env.local_head()
+    before = env.urls.read_text()
+    code, _ = run(env, capsys, URL_A)
+    assert code == 3
+    assert env.origin_head() == origin_before
+    assert env.local_head() == head
+    assert env.urls.read_text() == before
+    assert env.ssh_calls == []
+
+
+def test_main_ahead_of_origin_refuses(env, capsys):
+    (env.clone / "unpushed.txt").write_text("x\n")
+    git(env.clone, "add", ".")
+    git(env.clone, "commit", "-m", "unpushed")
+    origin_before = env.origin_head()
+    code, _ = run(env, capsys, URL_A)
+    assert code == 3
+    assert env.origin_head() == origin_before
+
+
+def test_main_equal_to_origin_pushes_exactly_one_commit(env, capsys):
+    origin_before = env.origin_head()
+    code, out = run(env, capsys, URL_A)
+    assert code == 0
+    new = git(env.origin, "rev-list", "%s..main" % origin_before).splitlines()
+    assert len(new) == 1
+    assert env.origin_head() == env.local_head()
+
+
+def test_push_failure_does_not_rewrite_history(env, capsys, monkeypatch):
+    calls = []
+    real_git = handoff.git
+    monkeypatch.setattr(
+        handoff, "git", lambda repo, *a: (calls.append(a), real_git(repo, *a))[1])
+    hook = env.origin / "hooks" / "pre-receive"
+    hook.write_text("#!/bin/sh\necho rejected >&2\nexit 1\n")
+    hook.chmod(0o755)
+    code, out = run(env, capsys, URL_A)
+    assert code == 4
+    assert git(env.clone, "rev-list", "--count", "origin/main..HEAD") == "1"
+    assert not (env.clone / ".git" / "rebase-merge").exists()
+    assert not (env.clone / ".git" / "rebase-apply").exists()
+    assert ("push", "origin", "main") in calls
+    assert not [c for c in calls if c[0] in ("pull", "rebase", "reset", "merge", "push")
+                and c != ("push", "origin", "main")]

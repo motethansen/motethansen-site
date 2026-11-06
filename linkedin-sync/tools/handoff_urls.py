@@ -2,11 +2,11 @@
 """Hand LinkedIn article URLs to the droplet via git.
 
 Validates and normalises URLs, appends the new ones to
-linkedin-sync/article-urls.txt, commits, pushes to origin/main, then runs the
-droplet sync over SSH. Status messages go to stderr; stdout is only JSON.
+linkedin-sync/article-urls.txt, commits on main and pushes only that commit to
+origin/main, then runs the droplet sync over SSH. Status messages go to stderr; stdout is only JSON.
 
-Exit codes: 0 ok, 2 bad input, 3 git guard failed, 4 commit/push failed,
-5 SSH sync step failed or not configured.
+Exit codes: 0 ok, 2 bad input, 3 git guard failed (dirty, not on main, or main
+differs from origin/main), 4 commit/push failed, 5 SSH sync step failed or not configured.
 
 Environment (kept outside the repo):
   MOTETHANSEN_DROPLET_SSH  SSH config host alias for the droplet
@@ -105,20 +105,34 @@ def git(repo, *args):
 
 
 def guard(repo):
-    """Raise HandoffError(3) unless the clone is clean and not behind origin/main."""
+    """Raise HandoffError(3) unless the clone is clean, on main, and equal to origin/main.
+
+    The push publishes the whole branch tip, so the only safe state is one where
+    the tip is exactly what origin/main already has: the new commit is then the
+    only thing that goes out.
+    """
     status = git(repo, "status", "--porcelain")
     if status.returncode != 0:
         raise HandoffError(3, "git status failed: %s" % status.stderr.strip())
     if status.stdout.strip():
         raise HandoffError(3, "working tree is not clean; commit or stash first. Nothing was written.")
+    branch = git(repo, "symbolic-ref", "--short", "-q", "HEAD")
+    if branch.returncode != 0 or branch.stdout.strip() != "main":
+        raise HandoffError(
+            3, "current branch is %r, not 'main'; check out main first. Nothing was written."
+               % (branch.stdout.strip() or "(detached HEAD)"))
     fetch = git(repo, "fetch", "origin")
     if fetch.returncode != 0:
         raise HandoffError(3, "git fetch origin failed: %s" % fetch.stderr.strip())
-    behind = git(repo, "rev-list", "--count", "HEAD..origin/main")
-    if behind.returncode != 0:
-        raise HandoffError(3, "could not compare with origin/main: %s" % behind.stderr.strip())
-    if int(behind.stdout.strip() or "0") > 0:
-        raise HandoffError(3, "local branch is behind origin/main; update it first. Nothing was written.")
+    local = git(repo, "rev-parse", "refs/heads/main")
+    remote = git(repo, "rev-parse", "refs/remotes/origin/main")
+    if local.returncode != 0 or remote.returncode != 0:
+        raise HandoffError(3, "could not resolve main and origin/main: %s"
+                           % (local.stderr.strip() or remote.stderr.strip()))
+    if local.stdout.strip() != remote.stdout.strip():
+        raise HandoffError(
+            3, "local main is not equal to origin/main (behind or ahead); make them match first. "
+               "Nothing was written.")
 
 
 def append_urls(path, urls):
@@ -139,25 +153,15 @@ def commit_and_push(repo, urls_relpath, count):
     commit = git(repo, "commit", "-m", message, "--", urls_relpath)
     if commit.returncode != 0:
         raise HandoffError(4, "git commit failed: %s" % (commit.stderr.strip() or commit.stdout.strip()))
-    push = git(repo, "push", "origin", "HEAD:main")
-    if push.returncode == 0:
-        return True
-    log("push failed: %s" % push.stderr.strip())
-    pull = git(repo, "pull", "--rebase", "origin", "main")
-    if pull.returncode != 0:
-        git(repo, "rebase", "--abort")
+    push = git(repo, "push", "origin", "main")
+    if push.returncode != 0:
         raise HandoffError(
             4,
-            "push step failed, and git pull --rebase hit a conflict; ran git rebase --abort. "
-            "The commit remains locally; it was not pushed.",
+            "git push step failed: %s. The commit remains locally and was not pushed; "
+            "nothing was retried or rewritten." % push.stderr.strip(),
             committed=True,
         )
-    raise HandoffError(
-        4,
-        "push step failed; ran git pull --rebase once and stopped (no second push). "
-        "The commit remains locally; push it manually after checking the result.",
-        committed=True,
-    )
+    return True
 
 
 def trigger_sync(env=None):
@@ -172,11 +176,16 @@ def trigger_sync(env=None):
                    "but the droplet was not synced." % name, committed=True)
     argv = ["ssh", "-o", "BatchMode=yes", alias] + shlex.split(remote_cmd)
     try:
-        result = subprocess.run(argv, timeout=SSH_TIMEOUT)
+        # Remote progress output must not reach stdout, which is JSON only.
+        result = subprocess.run(
+            argv, timeout=SSH_TIMEOUT, stdout=subprocess.PIPE, universal_newlines=True)
     except subprocess.TimeoutExpired:
         raise HandoffError(5, "SSH sync step failed: timed out after %ds. The URL is already pushed." % SSH_TIMEOUT, committed=True)
     except OSError as exc:
         raise HandoffError(5, "SSH sync step failed: %s. The URL is already pushed." % exc, committed=True)
+    if result.stdout:
+        sys.stderr.write(result.stdout)
+        sys.stderr.flush()
     if result.returncode != 0:
         raise HandoffError(
             5, "SSH sync step failed (exit %d). The URL is already pushed." % result.returncode,

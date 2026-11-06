@@ -9,12 +9,15 @@ them onto the site without you touching the droplet. In order, it:
    fragment and trailing slash are dropped). If `--owner-check PATH` is given,
    each URL must also appear in that file (one URL per line, `#` comments ok).
    One bad URL rejects the whole run and nothing is written.
-2. Checks the clone is clean and not behind `origin/main`.
+2. Checks the clone is clean, on the branch `main`, and that local `main` is
+   exactly `origin/main` (fetched first). Anything else is refused, so the push
+   can only ever publish this command's own commit.
 3. Appends the URLs not already listed to `linkedin-sync/article-urls.txt`.
-4. Commits and pushes to `origin/main`.
+4. Commits and runs `git push origin main`. One commit, no retry, no rebase.
 5. Runs the droplet sync over SSH (`sync-from-git.sh`).
 
-Status messages go to stderr. Stdout is one JSON line:
+Status messages go to stderr, including anything the remote sync script prints.
+Stdout is exactly one JSON line:
 `{"added": [...], "committed": bool, "synced": bool}`.
 
 ### Usage
@@ -46,8 +49,8 @@ Running it again with a URL that is already listed is harmless: it prints
 |------|---------|
 | 0 | OK, or idempotent (nothing new to add) |
 | 2 | Invalid URL, owner-check rejection, or unreadable owner-check file. No changes made |
-| 3 | Clone is dirty, behind `origin/main`, or the fetch/status check failed. No changes made |
-| 4 | Commit or push failed |
+| 3 | Clone is dirty, not on `main`, local `main` differs from `origin/main`, or the fetch/status check failed. No changes made |
+| 4 | Commit or push failed (the message names the step) |
 | 5 | SSH sync failed, timed out, or the environment variables below are not set |
 
 ### Environment variables
@@ -129,29 +132,44 @@ and then rebuilds the `sync` image, so only run it where that is intended.
 ### Failure recovery
 
 **Exit 3 (guard).** Nothing was changed. Clean up the clone
-(`git status`; commit or stash your edits) and/or `git pull --ff-only`, then re-run.
+(`git status`; commit or stash your edits), `git checkout main`, and make it
+equal to `origin/main` (`git pull --ff-only` if behind; if it is ahead, push or
+move those commits elsewhere first), then re-run.
 
 **Exit 4 (commit or push failed).** The URL file may already be edited and
-committed locally, but `origin/main` does not have it. The tool does not retry
-beyond one `git pull --rebase` (aborted on conflict) and never force-pushes.
+committed locally, but `origin/main` does not have it. The tool does not retry,
+rebase or rewrite anything, and never force-pushes; the stderr message says
+whether `git add`, `git commit` or `git push` failed.
 
 1. In the clone, run `git status` and `git log origin/main..HEAD`.
-2. If the commit is there: `git pull --rebase origin main`, resolve any
+2. If the commit is there and `git fetch origin` shows `origin/main` has not
+   moved: fix the cause of the push error and run `git push origin main`.
+   If `origin/main` has moved, `git pull --rebase origin main`, resolve any
    conflict in `article-urls.txt` (keep every URL line from both sides), then
-   `git push origin HEAD:main`.
+   `git push origin main`.
 3. If the commit failed and the file is only modified: inspect
    `git diff linkedin-sync/article-urls.txt`, then commit and push by hand, or
    `git restore linkedin-sync/article-urls.txt` and re-run.
-4. Run the sync step by hand (below), or just re-run the tool: it will say
-   `no new URLs to add` and exit 0, so use the manual sync instead.
+4. Then run the sync step (see exit 5). Re-running the tool is not enough once
+   the URL is listed: it says `no new URLs to add` and does not call SSH.
 
-**Exit 5 (SSH sync failed).** The URL **is already pushed** to `origin/main`
-and is safe. Only the droplet is stale. Fix the cause (variables unset, key or
-alias wrong, timeout of 300 s, remote script error) and then either:
+**Exit 5 (SSH sync failed).** The URL **is committed and pushed** to
+`origin/main`, so it is safe in git, but it is **not yet on the droplet**. The
+droplet only changes when `sync-from-git.sh` runs there; the checked-in
+scheduler (`deploy/docker-run.sh` via the systemd timer) only runs the container
+and does not fetch or reset the checkout, so waiting will not deliver it. Fix
+the cause (variables unset, key or alias wrong, timeout of 300 s, remote script
+error), then re-run the same SSH command the tool uses. It is idempotent
+(`sync-from-git.sh` resets the droplet to `origin/main` and rebuilds):
 
-- run the sync by hand: `ssh -o BatchMode=yes <alias> <any-string>`, or
-- log in to the droplet and run `bash <path>/sync-from-git.sh`.
+```sh
+ssh -o BatchMode=yes "$MOTETHANSEN_DROPLET_SSH" $MOTETHANSEN_SYNC_CMD
+```
 
-Re-running the tool does not retry the sync, because the URL is already listed.
-The droplet's own `git fetch` plus `reset --hard origin/main` also picks the
-URL up on its next scheduled sync.
+(Unquoted `$MOTETHANSEN_SYNC_CMD` on purpose: it is split into words, as the
+tool does. With the forced command from the setup checklist the server runs the
+script regardless of what is passed.) Or log in to the droplet and run
+`bash <path>/sync-from-git.sh`.
+
+Re-running `handoff_urls.py` itself does not retry the sync: the URL is already
+listed, so it exits 0 with `no new URLs to add` before reaching SSH.
