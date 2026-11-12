@@ -42,6 +42,9 @@ ARTICLE_RE = re.compile(r"^https://www\.linkedin\.com/pulse/([A-Za-z0-9-]{3,300}
 SYNC_TIMEOUT_S = 900
 SITE_WAIT_S = 75
 STATUS_TTL_S = 7 * 86400
+POLLER_STATUS_KEY = "linkedin-poll-status-v1"      # read by GET /api/health (shared/health-core.js)
+HEARTBEAT_EVERY_S = 600                            # 144 KV writes/day; the poll itself runs every minute
+HEARTBEAT_FILE = "/var/tmp/linkedin-admin-poll.heartbeat"
 
 
 def load_env(path):
@@ -199,12 +202,32 @@ def process(kv, urls_path, run=run_sync, listed=site_lists, now=time.time):
     return len(keys)
 
 
+def heartbeat(kv, path=HEARTBEAT_FILE, now=time.time, every_s=HEARTBEAT_EVERY_S):
+    """Tell /api/health this poller is alive. Throttled by a local file so a per-minute poll costs 1 write per 10 min."""
+    t = now()
+    try:
+        if t - os.path.getmtime(path) < every_s:
+            return False
+    except OSError:
+        pass
+    kv.put_json(POLLER_STATUS_KEY, {"ts": int(t)}, 86400)
+    with open(path, "w") as fh:
+        fh.write(str(int(t)))
+    return True
+
+
 def main():
     env = load_env(os.path.join(HERE, ".env"))
     kv = KV(env)
     lock = open(LOCK_PATH, "w")
-    # Cheap check first so an empty poll never waits for (or holds) the lock.
-    if not kv.list_keys(PENDING_PREFIX):
+    # Cheap check first so an empty poll never waits for (or holds) the lock. Reaching KV and listing
+    # successfully is what the heartbeat vouches for, so it is written only after that call works.
+    queued = kv.list_keys(PENDING_PREFIX)
+    try:
+        heartbeat(kv)
+    except Exception as exc:                                    # noqa: BLE001 — never let a heartbeat block publishing
+        print("heartbeat not written: %s" % exc, file=sys.stderr)
+    if not queued:
         return 0
     fcntl.flock(lock, fcntl.LOCK_EX)
     n = process(kv, os.path.join(HERE, "article-urls.txt"))

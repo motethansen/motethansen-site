@@ -45,3 +45,25 @@ test("staleSince is carried across runs and cleared on recovery", () => {
   assert.equal(withStaleSince([{ id: "va", status: "live", count: 1 }], prev, NOW)[0].staleSince, null);
   assert.equal(withStaleSince([{ id: "va", status: "snapshot", count: 1 }], null, NOW)[0].staleSince, NOW);
 });
+
+const okQueue = (over = {}) => ({ poller: { ts: NOW - 120 }, pending: 0, oldestPendingS: null, ...over });
+
+test("queue: live poller heartbeat and an empty queue are fine", () => {
+  const h = computeHealth(okFeed(), okLi(), NOW, okQueue());
+  assert.equal(h.status, "up"); assert.equal(h.checks.admin_poller, true); assert.equal(h.checks.admin_queue, true);
+});
+test("queue: a silent poller is degraded even with nothing queued", () => {
+  const h = computeHealth(okFeed(), okLi(), NOW, okQueue({ poller: { ts: NOW - 20 * 60 } }));
+  assert.equal(h.status, "degraded"); assert.match(h.errors[0], /poller last reported/);
+});
+test("queue: no heartbeat at all is degraded", () => {
+  assert.equal(computeHealth(okFeed(), okLi(), NOW, okQueue({ poller: null })).checks.admin_poller, false);
+});
+test("queue: an address waiting 3 minutes is fine, 11 minutes is degraded", () => {
+  assert.equal(computeHealth(okFeed(), okLi(), NOW, okQueue({ pending: 1, oldestPendingS: NOW - 180 })).status, "up");
+  const h = computeHealth(okFeed(), okLi(), NOW, okQueue({ pending: 2, oldestPendingS: NOW - 11 * 60 }));
+  assert.equal(h.status, "degraded"); assert.match(h.errors[0], /2 address\(es\) from \/admin have waited/);
+});
+test("queue omitted keeps the old behaviour", () => {
+  assert.equal(computeHealth(okFeed(), okLi(), NOW).checks.admin_poller, undefined);
+});

@@ -18,6 +18,10 @@
 
 export const FEED_STATUS_KEY = "feed-status-v1";
 export const LINKEDIN_STATUS_KEY = "linkedin-sync-status-v1";
+/** Written by linkedin-sync/admin_poll.py on the droplet about every 10 minutes (see HEARTBEAT_EVERY_S there). */
+export const POLLER_STATUS_KEY = "linkedin-poll-status-v1";
+export const POLLER_MAX_AGE_S = 15 * 60;         // one heartbeat missed, plus margin
+export const PENDING_MAX_AGE_S = 10 * 60;        // an address queued from /admin should be picked up within ~1 min
 
 export const FEED_MAX_AGE_S = 3 * 3600;          // hourly cron + 2 missed runs
 export const SOURCE_STALE_AFTER_S = 3 * 3600;    // ~3 consecutive 429s
@@ -29,8 +33,11 @@ const hours = s => `${Math.round(s / 360) / 10} h`;
  * @param {object|null} feed      feed-status-v1: { ts, complete, degraded, sources:[{id,status,count,error,staleSince}] }
  * @param {object|null} linkedin  linkedin-sync-status-v1: { ts, discovery, collected, total, new }
  * @param {number} nowS           epoch seconds
+ * @param {{poller:object|null, pending:number, oldestPendingS:number|null}} [queue]
+ *        the /admin queue: the droplet poller's heartbeat and the age of the oldest unprocessed address.
+ *        Omit to skip those two checks.
  */
-export function computeHealth(feed, linkedin, nowS) {
+export function computeHealth(feed, linkedin, nowS, queue) {
   const errors = [];
   const checks = {};
   let status = "up";
@@ -63,6 +70,18 @@ export function computeHealth(feed, linkedin, nowS) {
     checks.linkedin_discovery = linkedin.discovery === "ok";
     if (linkedin.discovery === "walled") {
       degrade("LinkedIn discovery is walled (HTTP 999): new articles reach the site only if added by hand");
+    }
+  }
+
+  if (queue) {
+    const hb = queue.poller;
+    checks.admin_poller = !!hb && nowS - hb.ts <= POLLER_MAX_AGE_S;
+    if (!hb) degrade("the /admin queue poller on the droplet has not reported yet");
+    else if (!checks.admin_poller) degrade(`the /admin queue poller last reported ${hours(nowS - hb.ts)} ago (every minute, heartbeat every 10 min)`);
+    const age = queue.oldestPendingS == null ? 0 : nowS - queue.oldestPendingS;
+    checks.admin_queue = !(queue.pending > 0 && age > PENDING_MAX_AGE_S);
+    if (!checks.admin_queue) {
+      degrade(`${queue.pending} address(es) from /admin have waited ${hours(age)} without being published`);
     }
   }
 
