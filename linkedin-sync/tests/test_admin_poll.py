@@ -112,3 +112,16 @@ def test_failed_address_is_taken_back_out_of_the_list(tmp_path):
     ap.process(kv, str(urls), run=lambda: (0, ""), listed=lambda u: True)       # not in KV -> failed
     assert kv.store["linkedin-add-status:j1"]["state"] == "failed"
     assert urls.read_text() == "https://www.linkedin.com/pulse/keep-me-abc\n"   # typo removed, old entry kept
+
+
+def test_heartbeat_is_written_at_most_every_ten_minutes(tmp_path):
+    kv = FakeKV({})
+    hb = str(tmp_path / "hb")
+    assert ap.heartbeat(kv, hb, now=lambda: 1_000_000) is True
+    assert kv.store["linkedin-poll-status-v1"] == {"ts": 1_000_000}
+    kv.store.pop("linkedin-poll-status-v1")
+    assert ap.heartbeat(kv, hb, now=lambda: 1_000_000) is False        # same instant: throttled by the local file
+    assert "linkedin-poll-status-v1" not in kv.store
+    import os
+    os.utime(hb, (900_000, 900_000))                                  # file is now 100 000 s old
+    assert ap.heartbeat(kv, hb, now=lambda: 1_000_000) is True
