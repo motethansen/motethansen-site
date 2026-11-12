@@ -27,7 +27,8 @@ export const FEED_MAX_AGE_S = 3 * 3600;          // hourly cron + 2 missed runs
 export const SOURCE_STALE_AFTER_S = 3 * 3600;    // ~3 consecutive 429s
 export const LINKEDIN_MAX_AGE_S = 20 * 3600;     // twice daily (12 h) + margin
 
-const hours = s => `${Math.round(s / 360) / 10} h`;
+/** "18 min" under 90 minutes, "3.5 h" above. */
+const hours = s => (s < 5400 ? `${Math.max(1, Math.round(s / 60))} min` : `${Math.round(s / 360) / 10} h`);
 
 /**
  * @param {object|null} feed      feed-status-v1: { ts, complete, degraded, sources:[{id,status,count,error,staleSince}] }

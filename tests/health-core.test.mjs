@@ -67,3 +67,10 @@ test("queue: an address waiting 3 minutes is fine, 11 minutes is degraded", () =
 test("queue omitted keeps the old behaviour", () => {
   assert.equal(computeHealth(okFeed(), okLi(), NOW).checks.admin_poller, undefined);
 });
+
+test("durations read as minutes when short, hours when long", () => {
+  const short = computeHealth(okFeed(), okLi(), NOW, okQueue({ pending: 1, oldestPendingS: NOW - 18 * 60 }));
+  assert.match(short.errors[0], /have waited 18 min without/);
+  const long = computeHealth(okFeed({ ts: NOW - 5 * 3600 }), okLi(), NOW);
+  assert.match(long.errors[0], /last ran 5 h ago/);
+});
