@@ -37,7 +37,7 @@ def remote_script(urls):
     # urls passed validate(): https://www.linkedin.com/pulse/<slug>, so they hold no shell metacharacters
     # other than '-', '.', '_', '%' — and are single-quoted anyway.
     adds = "\n".join("grep -qxF '%s' article-urls.txt || echo '%s' >> article-urls.txt" % (u, u) for u in urls)
-    return "set -e\ncd %s\n%s\ndocker compose run --rm sync --no-discover 2>&1 | tail -n 6\n" % (REMOTE_DIR, adds)
+    return "set -e\ncd %s\n%s\nflock -w 900 /var/lock/linkedin-sync.lock docker compose run --rm sync --no-discover 2>&1 | tail -n 6\n" % (REMOTE_DIR, adds)
 
 
 def on_site(urls):
