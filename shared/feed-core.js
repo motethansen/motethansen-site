@@ -30,6 +30,7 @@
  */
 
 import { LINKEDIN_POSTS } from "../content/linkedin-posts.js";
+import { FEED_STATUS_KEY, withStaleSince } from "./health-core.js";
 
 export const CACHE_KEY = "writing-feed-v4";
 export const LINKEDIN_KEY = "linkedin-posts-v1";
@@ -205,6 +206,25 @@ async function putSnapshot(env, sourceId, posts) {
     });
   } catch (e) {
     console.warn(`[feed] snapshot write failed for ${sourceId}:`, e?.message);
+  }
+}
+
+/**
+ * Leave a status record for /api/health. Written by the hourly cron only (never by a
+ * visitor request), so the health endpoint reads state instead of probing Substack.
+ */
+export async function writeFeedStatus(env, build) {
+  if (!env.SITE_KV) return;
+  const nowS = Math.floor(Date.now() / 1000);
+  try {
+    const previous = await kvGetJson(env, FEED_STATUS_KEY);
+    const record = {
+      ts: nowS, complete: build.complete, degraded: build.degraded,
+      sources: withStaleSince(build.sources, previous, nowS),
+    };
+    await env.SITE_KV.put(FEED_STATUS_KEY, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 3 });
+  } catch (e) {
+    console.warn("[feed] status write failed:", e?.message);
   }
 }
 

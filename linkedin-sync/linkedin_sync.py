@@ -134,9 +134,9 @@ def merge(existing, scraped):
 
 # ── Cloudflare KV ─────────────────────────────────────
 
-def kv_url(cfg):
+def kv_url(cfg, key=None):
     return (f"{CF_API}/accounts/{cfg['account_id']}"
-            f"/storage/kv/namespaces/{cfg['namespace_id']}/values/{KV_KEY}")
+            f"/storage/kv/namespaces/{cfg['namespace_id']}/values/{key or KV_KEY}")
 
 
 def kv_read(cfg):
@@ -167,6 +167,29 @@ def kv_write(cfg, posts):
     )
     resp.raise_for_status()
     return resp.json()
+
+
+STATUS_KV_KEY = "linkedin-sync-status-v1"
+# How the last discovery attempt went: "ok" | "walled" | "skipped". Module state because
+# _resolve_urls() already knows, and threading it through collect_articles() would change
+# a signature the tests rely on.
+_DISCOVERY = {"state": "skipped"}
+
+
+def kv_write_status(cfg, existing, scraped, merged):
+    """Leave a status record for the site's /api/health. Best-effort: never fails the run."""
+    record = {"ts": int(datetime.now(timezone.utc).timestamp()),
+              "discovery": _DISCOVERY["state"], "collected": len(scraped),
+              "total": len(merged), "new": len(merged) - len(existing)}
+    try:
+        resp = requests.put(
+            kv_url(cfg, STATUS_KV_KEY),
+            headers={"Authorization": f"Bearer {cfg['api_token']}",
+                     "Content-Type": "application/json"},
+            data=json.dumps(record), params={"expiration_ttl": 60 * 60 * 24 * 3}, timeout=30)
+        resp.raise_for_status()
+    except Exception as exc:  # noqa: BLE001 — a status write must never break the sync
+        print(f"status record not written ({exc})")
 
 
 # ── Errors ────────────────────────────────────────────
@@ -246,8 +269,10 @@ def _resolve_urls(args, cfg):
         import linkedin_discover
         try:
             discovered = linkedin_discover.discover_urls(cfg["profile"])
+            _DISCOVERY["state"] = "ok"
             print(f"discovered {len(discovered)} article URL(s) on the public profile page")
         except linkedin_discover.DiscoveryError as exc:
+            _DISCOVERY["state"] = "walled"
             print(f"discovery unavailable ({exc}) — continuing with the durable URL list")
 
     urls = list(discovered) + list(args.url or [])
@@ -353,6 +378,7 @@ def run(cfg, args):
 
     kv_write(cfg, merged)
     print(f"wrote {len(merged)} article(s) to KV key '{KV_KEY}'")
+    kv_write_status(cfg, existing, scraped, merged)
     if len(merged) != len(existing):
         _ping_refresh(cfg)
     return merged
