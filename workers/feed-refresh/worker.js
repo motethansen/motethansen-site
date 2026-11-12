@@ -17,7 +17,7 @@
  * persisted.
  */
 
-import { buildFeed, cacheFeed, CACHE_KEY } from "../../shared/feed-core.js";
+import { buildFeed, cacheFeed, writeFeedStatus, CACHE_KEY } from "../../shared/feed-core.js";
 
 export default {
   // Cron trigger
@@ -72,6 +72,7 @@ async function refreshFeeds(env) {
   }
 
   const wrote = await cacheFeed(env, build);
+  await writeFeedStatus(env, build);
   if (wrote) {
     console.log(`[feed-refresh] Wrote ${build.posts.length} posts to KV key "${CACHE_KEY}"` +
                 (build.degraded ? " (degraded build — short TTL)" : ""));
