@@ -34,3 +34,11 @@ def test_status_write_failure_never_raises(monkeypatch, capsys):
     monkeypatch.setattr(ls.requests, "put", boom)
     ls.kv_write_status(CFG, [], [], [])          # must not raise
     assert "status record not written" in capsys.readouterr().out
+
+
+def test_run_that_skipped_discovery_leaves_the_record_alone(monkeypatch):
+    called = []
+    monkeypatch.setattr(ls.requests, "put", lambda *a, **k: called.append(1) or _Resp())
+    ls._DISCOVERY["state"] = "skipped"
+    ls.kv_write_status(CFG, [], [], [])
+    assert called == []
