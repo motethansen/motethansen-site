@@ -21,4 +21,6 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 # One-shot run; --rm cleans up the container. Exit code is the script's exit code.
-exec docker compose run --rm sync "$@"
+# Same lock as admin_poll.py (the /admin page): two syncs must never merge into KV at once. The
+# scheduled run waits up to 15 min for a poll-triggered one rather than racing it.
+exec flock -w 900 /var/lock/linkedin-sync.lock docker compose run --rm sync "$@"

@@ -1,0 +1,11 @@
+[Unit]
+Description=Publish LinkedIn article addresses queued from motethansen.com/admin
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# enable-admin-poll.sh pins the real path via a drop-in; an empty poll is one KV list call.
+WorkingDirectory=/opt/motethansen-site/linkedin-sync
+ExecStart=/usr/bin/python3 /opt/motethansen-site/linkedin-sync/admin_poll.py
+TimeoutStartSec=20min

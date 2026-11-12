@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin</title>
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <main>
+    <h1>Publish a LinkedIn article</h1>
+
+    <form id="login" hidden autocomplete="on">
+      <label for="user">Username</label>
+      <input id="user" name="username" type="text" autocomplete="username" required>
+      <label for="pass">Password</label>
+      <input id="pass" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+      <p class="msg" id="login-msg" role="alert"></p>
+    </form>
+
+    <form id="add" hidden>
+      <label for="url">LinkedIn article address</label>
+      <input id="url" name="url" type="url" inputmode="url" placeholder="https://www.linkedin.com/pulse/…" required autofocus>
+      <button type="submit" id="save">Save</button>
+      <p class="msg" id="add-msg" role="alert"></p>
+      <ul id="jobs"></ul>
+      <button type="button" id="logout" class="link">Sign out</button>
+    </form>
+  </main>
+  <script src="/admin/admin.js" defer></script>
+</body>
+</html>
