@@ -177,7 +177,13 @@ _DISCOVERY = {"state": "skipped"}
 
 
 def kv_write_status(cfg, existing, scraped, merged):
-    """Leave a status record for the site's /api/health. Best-effort: never fails the run."""
+    """Leave a status record for the site's /api/health. Best-effort: never fails the run.
+
+    A run that skipped discovery (li-add, --no-discover) says nothing about whether the wall is up,
+    so it must not overwrite the scheduled run's record with a cleaner-looking one.
+    """
+    if _DISCOVERY["state"] == "skipped":
+        return
     record = {"ts": int(datetime.now(timezone.utc).timestamp()),
               "discovery": _DISCOVERY["state"], "collected": len(scraped),
               "total": len(merged), "new": len(merged) - len(existing)}
