@@ -49,3 +49,6 @@ button.link { background:none; color:var(--muted); font-weight:400; padding:.2re
 .sites label { display:flex; align-items:center; gap:.4rem; font-weight:500; margin:0; }
 .sites input { width:auto; }
 .rows .s { color:var(--muted); font-size:.85rem; }
+
+.ext { margin-top:2.5rem; max-width:640px; }
+.ext .row { display:flex; gap:.5rem; } .ext .row input { flex:1; } .ext .row button { margin-top:0; }

@@ -1,6 +1,6 @@
 /** D1 queries for articles. `db` is a D1 database (or the node:sqlite adapter used in tests). */
 
-const COLS_LIST = "id, slug, title, description, cover, tags, sites, status, published_at, created_at, updated_at, origin_url, external_url, source, platform";
+const COLS_LIST = "id, slug, title, description, cover, tags, sites, status, published_at, created_at, updated_at, origin_url, external_url, source, platform, provisional";
 const COLS_FULL = COLS_LIST + ", body_md";
 
 const parse = r => r && { ...r, tags: JSON.parse(r.tags || "[]"), sites: JSON.parse(r.sites || "[]") };
@@ -79,16 +79,29 @@ export async function externalSlug(url) {
  * `status` is never touched, so hiding an entry in the editor survives the next sync.
  * @returns {"inserted"|"updated"}
  */
-export async function upsertExternal(db, src, e, now = Math.floor(Date.now() / 1000)) {
+export async function upsertExternal(db, src, e, now = Math.floor(Date.now() / 1000), provisional = 0) {
   const existing = await db.prepare("SELECT id FROM articles WHERE external_url = ?").bind(e.url).first();
   await db.prepare(
     `INSERT INTO articles (id, slug, title, description, body_md, cover, tags, sites, status, published_at, created_at, updated_at,
-                           origin_url, external_url, source, platform)
-     VALUES (?, ?, ?, ?, '', ?, '[]', ?, 'published', ?, ?, ?, NULL, ?, ?, ?)
+                           origin_url, external_url, source, platform, provisional)
+     VALUES (?, ?, ?, ?, '', ?, '[]', ?, 'published', ?, ?, ?, NULL, ?, ?, ?, ?)
      ON CONFLICT (external_url) WHERE external_url IS NOT NULL DO UPDATE SET
        title = excluded.title, description = excluded.description, cover = excluded.cover,
-       published_at = COALESCE(excluded.published_at, articles.published_at), updated_at = excluded.updated_at`,
+       published_at = COALESCE(excluded.published_at, articles.published_at), updated_at = excluded.updated_at,
+       provisional = excluded.provisional`,
   ).bind(crypto.randomUUID(), await externalSlug(e.url), e.title, e.description, e.image, JSON.stringify(src.sites),
-    e.published_at, now, now, e.url, src.source, src.platform).run();
+    e.published_at, now, now, e.url, src.source, src.platform, provisional).run();
   return existing ? "updated" : "inserted";
+}
+
+/**
+ * After a full pull of a source: remove provisional entries that the pull did not see and that are old enough that it
+ * should have (the pull lists every post, newest first). Never touches confirmed entries.
+ * @returns {Promise<number>} how many were removed
+ */
+export async function removeUnconfirmed(db, source, seenUrls, now = Math.floor(Date.now() / 1000), graceS = 1800) {
+  const { results } = await db.prepare("SELECT id, external_url FROM articles WHERE provisional = 1 AND source = ? AND created_at < ?").bind(source, now - graceS).all();
+  const gone = results.filter(r => !seenUrls.includes(r.external_url));
+  for (const r of gone) await db.prepare("DELETE FROM articles WHERE id = ? AND provisional = 1").bind(r.id).run();
+  return gone.length;
 }

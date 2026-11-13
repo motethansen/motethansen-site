@@ -32,6 +32,14 @@
         <button type="button" data-status="published">Published</button>
       </nav>
       <ul id="list" class="rows"></ul>
+      <form id="ext" class="ext">
+        <label for="ext-url">Add a Substack post by address</label>
+        <div class="row">
+          <input id="ext-url" type="url" placeholder="https://vizneoacademy.substack.com/p/…" autocomplete="off">
+          <button type="submit" class="secondary">Add</button>
+        </div>
+        <p class="msg" id="ext-msg" role="status"></p>
+      </form>
       <p class="msg" id="list-msg" role="alert"></p>
     </section>
 

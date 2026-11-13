@@ -12,6 +12,7 @@ import * as store from "./db.js";
 import { renderMarkdown, excerpt } from "./render.js";
 import { validateArticle, validateIngest } from "./validate.js";
 import { uploadImage, importImage, serveImage } from "./media.js";
+import { addByAddress } from "./substack.js";
 import { articlePage, feedEntry, rssFeed, listPage } from "./templates.js";
 import { siteOf, ENABLED_SITES } from "./sites.js";
 import { timingSafeEqualStr } from "../../../shared/admin-core.js";
@@ -32,13 +33,13 @@ export default {
   },
 };
 
-export async function route(request, env) {
+export async function route(request, env, deps = {}) {
   const url = new URL(request.url);
   const { pathname: path } = url;
   const method = request.method;
 
   if (path === "/api/ingest/external") return ingest(request, env, method);
-  if (path.startsWith("/api/admin/")) return admin(request, env, path.slice("/api/admin/".length), method);
+  if (path.startsWith("/api/admin/")) return admin(request, env, path.slice("/api/admin/".length), method, deps);
   if (path === "/admin") return Response.redirect(new URL("/admin/", request.url).toString(), 308);
   if (path.startsWith("/admin/")) return adminUi(request, env);
 
@@ -104,16 +105,18 @@ async function ingest(request, env, method) {
   let inserted = 0, updated = 0;
   for (const e of v.entries) (await store.upsertExternal(env.DB, v.src, e)) === "inserted" ? inserted++ : updated++;
   const now = Math.floor(Date.now() / 1000);
+  // a pull lists the publication's whole catalogue, so a provisional entry it never sees is a mistyped address
+  const removed = await store.removeUnconfirmed(env.DB, v.src.source, v.entries.map(e => e.url), now);
   // what /api/health reads: when this source last synced, and what it saw
   await env.SITE_KV.put(`external-sync-v1:${body.source}`, JSON.stringify({ ts: now, seen: v.entries.length, inserted, updated, skipped: v.errors.length }), { expirationTtl: 7 * 86400 });
-  return json({ ok: true, inserted, updated, skipped: v.errors });
+  return json({ ok: true, inserted, updated, removed, skipped: v.errors });
 }
 
 async function readJson(request) {
   try { return await request.json(); } catch { return null; }
 }
 
-async function admin(request, env, sub, method) {
+async function admin(request, env, sub, method, deps = {}) {
   if (sub === "login" && method === "POST") return login({ request, env });
   if (sub === "logout" && method === "POST") return logout({ request, env });
   if (sub === "me" && method === "GET") return me({ request, env });
@@ -178,6 +181,12 @@ async function admin(request, env, sub, method) {
     const body = await readJson(request);
     if (!body || typeof body.body_md !== "string") return json({ error: "Bad request." }, 400);
     return json({ html: renderMarkdown(body.body_md), excerpt: excerpt(body.body_md) });
+  }
+  if (sub === "external" && method === "POST") {
+    const body = await readJson(request);
+    if (!body || typeof body.url !== "string") return json({ error: "Bad request." }, 400);
+    const r = await addByAddress(env, body.url, deps.fetch || fetch);
+    return json(r.body, r.status);
   }
   if (sub === "media/import" && method === "POST") {
     const body = await readJson(request);

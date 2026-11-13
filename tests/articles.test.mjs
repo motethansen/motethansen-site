@@ -394,3 +394,93 @@ test("a hidden linked-out entry stays hidden through the next sync", async () =>
   assert.deepEqual([row.status, row.title], ["draft", "Renamed upstream"]);
   assert.equal((await (await call(env, "/writing/index.json")).json()).articles.length, 0);
 });
+
+// ---------- add a Substack post by address ----------
+import { parsePostAddress, parseOg, titleFromSlug } from "../workers/articles/src/substack.js";
+const POST_HTML = `<html><head>
+<meta property="og:title" content="From one prompt to a Scrum team &amp; more">
+<meta property="og:description" content="Building distributed-infra">
+<meta property="og:image" content="https://substackcdn.com/image/fetch/cover.png">
+<meta property="article:published_time" content="2026-11-12T04:36:19.170Z"></head><body>x</body></html>`;
+const addPost = (env, cookie, url, fetcher) =>
+  route(new Request(ORIGIN + "/api/admin/external", { method: "POST", headers: { "content-type": "application/json", origin: ORIGIN, cookie }, body: JSON.stringify({ url }) }), env, { fetch: fetcher });
+const PAGE = "https://vizneoacademy.substack.com/p/from-one-prompt-to-a-scrum-team";
+
+test("substack address: only posts on our two publications, normalised", () => {
+  assert.equal(parsePostAddress(PAGE + "/?utm_source=x#c").url, PAGE);
+  assert.equal(parsePostAddress(PAGE).id, "va-substack");
+  assert.equal(parsePostAddress("https://urbanlifeworks.substack.com/p/abc").id, "ulw-substack");
+  for (const bad of ["http://vizneoacademy.substack.com/p/x", "https://vizneoacademy.substack.com/", "https://vizneoacademy.substack.com/about",
+    "https://othersite.substack.com/p/x", "https://evil.com/p/x", "https://vizneoacademy.substack.com@evil.com/p/x", "https://u:p@vizneoacademy.substack.com/p/x",
+    "https://vizneoacademy.substack.com:8443/p/x", "https://vizneoacademy.substack.com/p/x/y", "https://www.linkedin.com/pulse/a-b-c", "nope"]) {
+    assert.equal(parsePostAddress(bad), null, bad);
+  }
+  assert.equal(titleFromSlug("from-one-prompt--to-a-scrum-team"), "From one prompt to a scrum team");
+  assert.deepEqual(parseOg(POST_HTML), { title: "From one prompt to a Scrum team & more", description: "Building distributed-infra", image: "https://substackcdn.com/image/fetch/cover.png", date: "2026-11-12T04:36:19.170Z" });
+});
+test("add by address: needs a session; bad addresses are refused without any fetch", async () => {
+  const env = makeEnv(); let fetched = 0; const f = async () => { fetched++; return new Response(POST_HTML); };
+  assert.equal((await addPost(env, "", PAGE, f)).status, 401);
+  const cookie = await signedIn(env);
+  assert.equal((await addPost(env, cookie, "https://evil.com/p/x", f)).status, 400);
+  assert.equal(fetched, 0);                                                           // never fetches an address we did not accept
+});
+test("add by address: Substack readable -> full details, listed on the right sites, and the pull can refresh it later", async () => {
+  const env = makeEnv(); const cookie = await signedIn(env);
+  const r = await (await addPost(env, cookie, PAGE + "?utm=1", async () => new Response(POST_HTML, { status: 200 }))).json();
+  assert.equal(r.state, "added"); assert.equal(r.title, "From one prompt to a Scrum team & more");
+  const row = env.DB.raw.prepare("SELECT title, description, cover, published_at, sites, external_url FROM articles").get();
+  assert.equal(row.external_url, PAGE); assert.equal(row.published_at, Math.floor(Date.parse("2026-11-12T04:36:19.170Z") / 1000));
+  assert.deepEqual(JSON.parse(row.sites), ["motethansen", "vizneo"]);
+  assert.equal((await (await vcall(env, "/writing/index.json")).json()).articles.length, 1);   // Vizneo Academy shows on vizneo.com too
+  const again = await (await addPost(env, cookie, PAGE, async () => new Response(POST_HTML))).json();
+  assert.equal(again.state, "updated"); assert.equal(env.DB.raw.prepare("SELECT COUNT(*) c FROM articles").get().c, 1);
+});
+test("add by address: Substack blocks us (429, error, timeout) -> listed now with a title from the address; the pull later fixes it", async () => {
+  for (const f of [async () => new Response("slow down", { status: 429 }), async () => new Response("oops", { status: 503 }), async () => { throw new Error("network"); },
+    async () => new Response("<html>challenge</html>", { status: 200 })]) {
+    const env = makeEnv(); const cookie = await signedIn(env);
+    const r = await (await addPost(env, cookie, PAGE, f)).json();
+    assert.equal(r.state, "queued"); assert.equal(r.title, "From one prompt to a scrum team"); assert.match(r.note, /within 10 minutes/);
+    // the next pull pushes the real details under the same address: one row, now correct
+    await push(env, { source: "va-substack", entries: [va({ url: PAGE, title: "From one prompt to a Scrum team", date: "2026-11-12T04:36:19Z" })] });
+    const rows = env.DB.raw.prepare("SELECT title, published_at FROM articles").all();
+    assert.equal(rows.length, 1); assert.equal(rows[0].title, "From one prompt to a Scrum team");
+    assert.equal(rows[0].published_at, Math.floor(Date.parse("2026-11-12T04:36:19Z") / 1000));
+  }
+});
+test("add by address: a blocked fetch never overwrites real details that are already stored; a 404 is refused and stores nothing", async () => {
+  const env = makeEnv(); const cookie = await signedIn(env);
+  await push(env, { source: "va-substack", entries: [va({ url: PAGE, title: "Real title" })] });
+  const r = await (await addPost(env, cookie, PAGE, async () => new Response("", { status: 429 }))).json();
+  assert.equal(r.state, "exists"); assert.equal(env.DB.raw.prepare("SELECT title FROM articles").get().title, "Real title");
+  const env2 = makeEnv(); const cookie2 = await signedIn(env2);
+  const nf = await addPost(env2, cookie2, "https://urbanlifeworks.substack.com/p/typo-post", async () => new Response("", { status: 404 }));
+  assert.equal(nf.status, 404); assert.equal(env2.DB.raw.prepare("SELECT COUNT(*) c FROM articles").get().c, 0);
+});
+
+test("provisional entries: confirmed by the pull, or removed when the pull never sees them after 30 minutes; confirmed ones are never removed", async () => {
+  const env = makeEnv(); const cookie = await signedIn(env);
+  const blocked = async () => new Response("", { status: 429 });
+  const typo = "https://vizneoacademy.substack.com/p/typo-in-the-address";
+  await addPost(env, cookie, PAGE, blocked); await addPost(env, cookie, typo, blocked);
+  assert.equal(env.DB.raw.prepare("SELECT COUNT(*) c FROM articles WHERE provisional = 1").get().c, 2);
+
+  // a pull right away must not remove anything (grace period) but confirms the real post
+  let r = await (await push(env, { source: "va-substack", entries: [va({ url: PAGE })] })).json();
+  assert.equal(r.removed, 0);
+  assert.equal(env.DB.raw.prepare("SELECT provisional p FROM articles WHERE external_url = ?").get(PAGE).p, 0);   // confirmed
+  assert.equal(env.DB.raw.prepare("SELECT provisional p FROM articles WHERE external_url = ?").get(typo).p, 1);
+
+  // a confirmed (real) post that has dropped out of the feed window must survive every later pull
+  const OLD = "https://vizneoacademy.substack.com/p/an-older-real-post";
+  await push(env, { source: "va-substack", entries: [va({ url: PAGE }), va({ url: OLD, title: "Older real post" })] });
+
+  // 31 minutes later the typo is still unseen -> removed; the confirmed post and other sources' rows survive
+  env.DB.raw.exec("UPDATE articles SET created_at = created_at - 3600");
+  await push(env, { source: "ulw-substack", entries: [va({ url: "https://urbanlifeworks.substack.com/p/ulw-one", title: "ULW" })] });
+  r = await (await push(env, { source: "va-substack", entries: [va({ url: PAGE })] })).json();
+  assert.equal(r.removed, 1);
+  const left = env.DB.raw.prepare("SELECT external_url FROM articles ORDER BY external_url").all().map(x => x.external_url);
+  assert.deepEqual(left, [OLD, "https://urbanlifeworks.substack.com/p/ulw-one", PAGE].sort());
+});

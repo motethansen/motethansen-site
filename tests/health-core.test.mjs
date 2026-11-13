@@ -10,14 +10,14 @@ test("both sources pulled recently and the service up is up", () => {
   assert.equal(h.status, "up"); assert.deepEqual(h.errors, []); assert.equal(h.component, "motethansen-site");
   assert.deepEqual(Object.keys(h.checks).sort(), ["articles_service", "sync_ulw-substack", "sync_va-substack"]);
 });
-test("a source not pulled for over 3 h is degraded and names it and the job to look at", () => {
+test("a source not pulled for over an hour is degraded and names it and the job to look at", () => {
   const h = computeHealth({ ...fresh, "va-substack": { ts: NOW - SYNC_MAX_AGE_S - 60, seen: 18 } }, true, NOW);
   assert.equal(h.status, "degraded"); assert.equal(h.checks["sync_va-substack"], false);
-  assert.match(h.errors[0], /va-substack last pulled 3 h ago .*thinkpad/);
+  assert.match(h.errors[0], /va-substack last pulled 61 min ago .*thinkpad/);
 });
-test("exactly at the limit is still fine; one missed hourly run is fine", () => {
+test("exactly at the limit is still fine; a few missed 10-minute runs are fine", () => {
   assert.equal(computeHealth({ ...fresh, "va-substack": { ts: NOW - SYNC_MAX_AGE_S, seen: 1 } }, true, NOW).status, "up");
-  assert.equal(computeHealth({ ...fresh, "va-substack": { ts: NOW - 5400, seen: 1 } }, true, NOW).status, "up");
+  assert.equal(computeHealth({ ...fresh, "va-substack": { ts: NOW - 1800, seen: 1 } }, true, NOW).status, "up");
 });
 test("a source never pulled is degraded", () => {
   const h = computeHealth({ ...fresh, "ulw-substack": null }, true, NOW);
