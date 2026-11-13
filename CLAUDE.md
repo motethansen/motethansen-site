@@ -1,266 +1,84 @@
 # motethansen-site — Claude Context
 
 ## What this repo is
-Personal website for **Michael Motet Hansen** (motethansen.com) and resume subdomain
-(michael.motethansen.com). Hosted on **Cloudflare Pages** — static files in `public/`,
-serverless logic in `functions/api/`, and a standalone scheduled Worker in
-`workers/feed-refresh/`. A separate Python job (`linkedin-sync/`) runs on
-DigitalOcean to keep LinkedIn articles fresh.
+Personal website for **Michael Motet Hansen** (motethansen.com, resume at michael.motethansen.com) on **Cloudflare Pages**, plus
+the **shared articles service** (Worker `motethansen-articles`) that also serves **vizneo.com**. Articles are written in the web
+editor at `/admin`; Substack posts are pulled hourly by the thinkpad. LinkedIn is no longer used (it challenges every
+non-browser client since 2026-11-13); the 9 old LinkedIn articles are kept as linked-out entries.
 
 ## Repo structure
 ```
-public/
-  index.html          — main landing page (motethansen.com); shows top 9 posts + "View all" button
-  style.css           — shared dark theme stylesheet
-  favicon.svg         — SVG favicon (mh monogram, purple-to-teal gradient)
-  resume/
-    index.html        — resume page (michael.motethansen.com), standalone CSS
-  writing/
-    index.html        — full articles archive with client-side search (fetches /api/writing?all=1)
-
-content/
-  linkedin-posts.js   — SEED/fallback array of LinkedIn articles (used when KV key is empty)
-
-functions/
-  _middleware.js      — host-based routing: michael.motethansen.com → /resume/ (ASSETS rewrite)
-  api/
-    contact.js        — contact form handler → Resend API → hansenmichaelmotet@gmail.com
-    writing.js        — thin HTTP layer over shared/feed-core.js. Serves writing-feed-v4 from KV, else rebuilds.
-                        ?all=1 returns full list; default returns top 9. Response includes { posts, total, cached }.
-                        ?debug=1 forces a live rebuild and returns per-source status (never writes the merged cache).
-    publications.js   — (legacy stub, ORCID now fetched client-side in JS)
-
-shared/
-  feed-core.js        — SINGLE source of truth for feed fetch/parse/merge/cache, imported by BOTH the Pages
-                        Function and the cron Worker. Holds SOURCES, the RSS parser, per-source fallback,
-                        and the cache-write guard. Do not fork this logic back into the entry points.
-
-workers/
-  feed-refresh/
-    worker.js         — scheduled cron Worker (HOURLY, 0 * * * * UTC); thin wrapper over shared/feed-core.js.
-                        GET /refresh?secret=…[&verbose=1] for a manual rebuild + per-source report.
-                        Fails closed — REFRESH_SECRET is a Worker secret; the value is in .env
-                        as FEED_REFRESH_SECRET.
-    wrangler.toml     — Worker config, KV binding SITE_KV
-
-scripts/
-  warm-feed-cache.mjs — MANUAL BREAK-GLASS ONLY, never automated. Refreshes the per-source snapshots
-                        from a residential IP. Needed only if a source is stuck on `snapshot` for days
-                        and the 14-day TTL is near expiry. Substack: 200 to residential, 403 to the
-                        droplets, intermittent to Cloudflare — so no server we own can do this.
-  test-feed-fallback.mjs — simulates a blocked publication (network failure, 200 challenge page, no
-                        snapshot) and asserts the fallback + cache-write guard hold. Needs network.
-
-linkedin-sync/        — Python job on the WD-Ubuntu droplet (188.166.215.225), systemd timer 05:30 + 17:30 UTC.
-                        Discovers new articles → fetches public metadata → merges → KV key linkedin-posts-v1
-  linkedin_sync.py    — CLI + run() core: collect → normalise → merge (union by URL) → write KV.
-                        Flags: --engine {auto,http,playwright}, --no-discover, --url/--add-url/--urls-file,
-                        --capture/--from-capture, --from-file, --dry-run, --print, --test-alert
-  linkedin_discover.py— finds NEW articles on the PUBLIC profile page (no cookie). Rate-limited per IP:
-                        retries 4x with spaced jittered backoff, best-effort, never fatal.
-  linkedin_public.py  — public per-article metadata (OG + JSON-LD), incl. the author name used by the
-                        authorship guard. No cookie.
-  linkedin_source.py  — legacy cookie scrape. Demoted/dead: LinkedIn walls the listing from datacentre IPs.
-  linkedin_playwright.py — headless Chromium engine (lazy import); walled from these IPs, retained only.
-  notify.py           — best-effort Resend failure-alert email (reuses site's Resend sender)
-  article-urls.txt    — durable URL list. LIVE DATA: discovery appends to it, so the droplet's copy is
-                        routinely AHEAD of git. sync-from-git.sh unions it, never replaces it.
-  articles.sample.json— starter data for --from-file
-  Dockerfile / compose.yaml — container image (Playwright python base) + run config
-  deploy/             — setup.sh, run.sh, systemd/ units, enable-schedule.sh / disable-schedule.sh
-                        sync-from-git.sh — bring a droplet's checkout to origin/main + rebuild.
-                        Preserves .env and UNIONS article-urls.txt.
-                        --dry-run to preview, --no-build to skip the image rebuild.
-  tests/              — pytest: transform, notify, parsers, discovery/authorship guard, capture round-trip,
-                        real-browser DOM (auto-skips). 38 passing, 2 skipped.
-  README.md           — droplet deploy + adaptive-engine/capture/alerting workflow
-
-wrangler.toml         — Pages project config, KV binding SITE_KV
-deploy.sh             — manual deploy: pages deploy + worker deploy → rebuild via Worker /refresh → verify (fails loud if incomplete)
-.env                  — GITIGNORED master key file (all API keys)
-.scrum/               — sprint records and backlog
+public/                 static site: index.html (home, top 9 posts), writing/index.html (archive + search), resume/, style.css
+functions/              Pages Functions
+  _middleware.js        michael.motethansen.com -> /resume/ (ASSETS rewrite)
+  admin/[[path]].js     /admin, /admin/*              -> articles service (editor page)
+  api/admin/[[path]].js /api/admin/*                  -> articles service (sign-in, article CRUD, preview, image upload/import)
+  api/ingest/[[path]].js /api/ingest/*                -> articles service (bearer-token push of Substack posts)
+  media/[[path]].js     /media/*                      -> articles service (uploaded images from R2)
+  writing/[[path]].js   /writing/<slug>/, rss.xml, index.json -> articles service; unknown slug = real 404
+  api/writing.js        the site's article list: reads /writing/index.json from the service, newest first, proxies images
+  api/health.js         Vantage health (reads KV sync records + pings the service; no third-party requests)
+  api/contact.js        contact form -> Resend; api/publications.js legacy stub; img.js first-party image proxy
+shared/                 admin-core.js (sessions, credentials, throttle), admin-http.js (cookies, origin check), health-core.js
+workers/articles/       THE SERVICE (see below): src/, admin-ui/ (editor page), migrations/, wrangler.toml
+scripts/substack_sync.py  hourly Substack pull (runs on the thinkpad)
+tests/                  node --test (needs `npm install` in workers/articles/ for markdown-it); scripts/test_substack_sync.py (pytest)
+wrangler.toml           Pages config: KV SITE_KV, service binding ARTICLES
+deploy.sh               manual deploy: articles service (+ D1 migrations) -> Pages -> verify
 ```
+
+## The articles service (`workers/articles/`)
+Worker `motethansen-articles`, **no public URL**, reached by service binding `ARTICLES` from this Pages project and from the
+vizneowebsite Worker. It tells sites apart by the request's host (`siteOf`), so both sites forward requests untouched.
+- **Storage:** D1 `motethansen-articles` (migrations in `migrations/`, applied by `deploy.sh` with `wrangler d1 migrations`),
+  R2 `motethansen-media` (images served at `/media/yyyy/mm/<uuid>.<ext>`), KV SITE_KV (sign-in throttle, sync records).
+- **Editor** (`/admin/`): served from the Worker's own assets (`admin-ui/`, `run_worker_first`) so every site shares one copy.
+  List, Markdown with live preview, toolbar, image upload/paste, cover, tags, slug, date, "Publish on" sites, draft/publish/unpublish/delete.
+  **Pasting a web page converts it to Markdown** (`html2md.js`) and copies LinkedIn/Substack images into R2
+  (`POST /api/admin/media/import`: https + exact host allowlist, no redirects, 5 MB, magic-byte check). Ctrl/Cmd+Shift+V pastes plain text.
+- **Safety:** raw HTML in Markdown is escaped; unsafe URLs dropped; images only from `/media/` or https. Sign-in: Worker secrets
+  `ADMIN_USER`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, HMAC cookie 12 h, 5 failures / 15 min lockout per IP, same-origin check on
+  writes, strict CSP on `/admin`. Pages itself holds no admin secrets. Credentials file on the MacBook: `~/.config/motethansen/admin-credentials`.
+- **Sites:** `ENABLED_SITES` / `SITES` / `EXTERNAL_SOURCES` in `src/sites.js`; page chrome per site in `src/layouts.js`.
+  motethansen.com keeps its static `/writing/` archive page; vizneo.com's `/writing/` is rendered by the service.
+- **Linked-out entries** (Substack, legacy LinkedIn): rows with `external_url`/`source`/`platform`; listed on the sites their source is
+  configured for (Vizneo Academy -> both, Urban Life Works -> motethansen.com), link out, no page, no RSS item. A hidden one stays hidden.
+
+## Substack
+Substack answers Cloudflare's IPs with HTTP 429 (sometimes for a day), so **the site never fetches it**. `scripts/substack_sync.py`
+runs hourly on the **thinkpad** (`~/.config/systemd/user/substack-sync.timer`, copy at `~/.local/bin/`, token in
+`~/.config/motethansen/ingest-token`) and pushes both feeds to `POST /api/ingest/external` (bearer `INGEST_TOKEN`, a Worker secret).
+Upserts by address, never deletes. The **mac-mini cannot be used**: it cannot reach motethansen.com/vizneo.com (dual en0/en1 route on
+192.168.0.0/24, see the netwatch notes). `/api/health` is degraded if either source has not synced for 3 h; Vantage entity `motethansen-content`.
 
 ## Deploy
 ```bash
-bash deploy.sh
+bash deploy.sh        # from main: service (+ migrations) -> Pages -> verify. Manual; no GitHub auto-deploy.
 ```
-Deploys the Pages site and the feed-refresh Worker, then asks the Worker to
-rebuild the feed **on Cloudflare** (`/refresh`), and verifies the live result —
-exiting non-zero if any publication is missing.
+`wrangler pages deploy` from any branch other than `main` goes to a **preview** URL (`<branch>.motethansen-site.pages.dev`), a safe place
+to test; production needs `main`. The Worker has no branches: deploying it from a branch changes production. vizneo.com is a separate
+repo (GitLab `vizneowebsite`): `npm run build && npm run deploy` (build first: the Vite plugin generates the deployed config).
+Pages serves the **home page with 200 for unknown paths** (no 404.html), so catch-all functions must return their own 404.
+Python `urllib` with its default User-Agent gets 403 from Cloudflare here; always send a browser-like UA to the site's own endpoints.
 
-Nothing about the production data path runs on a dev machine: the rebuild, the
-Substack fetches and the snapshot writes all happen in Cloudflare. Earlier versions
-fetched the feeds locally and busted the KV key from here; that made a laptop part
-of production and is gone.
-**No GitHub auto-deploy** — always deploy manually from a dev machine.
+## Tests
+`node --test tests/` (47 incl. security rules; mutation-check new ones) and `python -m pytest scripts`. UI behaviour needs a real browser:
+pyenv 3.10.13 Playwright with `executable_path` of a cached `chromium_headless_shell`; the admin CSP forbids string `wait_for_function`
+(poll instead); mint a short-lived session cookie with `signSession` rather than typing the password; macOS `End` scrolls, use Meta+ArrowDown.
 
-### Droplets
-| Host | IP | Role |
-|---|---|---|
-| **WD-Ubuntu** | 188.166.215.225 | **runs `linkedin-sync`** (timer 05:30 + 17:30 UTC) |
-| Vizneo-docker | 206.189.153.183 | budgetapp-api, edge-traefik. Sync **retired** here 2026-07-30 (checkout kept as a fallback) |
-
-The service moved because the Vizneo IP had been heavily rate limited by LinkedIn;
-WD-Ubuntu answered 6/6 clean. Both are real git checkouts at `/opt/motethansen-site`
-tracking `origin/main` over **HTTPS** (the repo is public and neither droplet has a
-GitHub key — the old SSH remote failed with `Host key verification failed`).
-
-Update the active host with:
-```bash
-ssh root@188.166.215.225 'cd /opt/motethansen-site && bash linkedin-sync/deploy/sync-from-git.sh'
-```
-Only ONE host may have the timer enabled, or KV gets written twice a day from two
-places. Check with `systemctl is-enabled linkedin-sync-docker.timer` on both;
-`deploy/disable-schedule.sh` turns it off.
-
-The droplet previously ran hand-copied files while its checkout sat pinned at an old
-commit — the code running was not the code in git and nothing surfaced that. Don't edit
-code on a droplet; commit, then sync.
-
-**Dev machines (MacBook Pro, Mac mini, ThinkPad) are for development only.** Never
-schedule production work on them; use a droplet or a Cloudflare cron Worker.
-
-## Environment variables (set in Cloudflare Pages dashboard)
-| Variable | Purpose |
-|---|---|
-| `RESEND_API_KEY` | Resend transactional email |
-| `RESEND_FROM_EMAIL` | Sender address (noreply@vizneo.com) |
-| `SITE_KV` | KV namespace binding (writing feed cache + LinkedIn posts) |
-
-Local `.env` keys use `VIZNEO_CF_*` prefix to avoid wrangler auto-pickup, and hold
-`FEED_REFRESH_SECRET` (the Worker's `/refresh` secret).
-The `linkedin-sync/` job has its own `.env` on the active droplet (0600, gitignored;
-see `linkedin-sync/.env.example`) with `CF_ACCOUNT_ID`, `CF_KV_NAMESPACE_ID`,
-`CF_API_TOKEN`, the `LINKEDIN_*` vars, and `FEED_REFRESH_URL`/`FEED_REFRESH_SECRET`.
-
-## KV keys (namespace SITE_KV, id 1b97cac1e10d4bcaaa1bef301a86af26)
+## KV (namespace SITE_KV, id 1b97cac1e10d4bcaaa1bef301a86af26)
 | Key | Written by | TTL |
 |---|---|---|
-| `writing-feed-v4` | cron Worker + Pages Function | 6h, or 90min if degraded |
-| `feed-src-v1:<sourceId>` | `shared/feed-core.js` on every successful fetch | 14d |
-| `linkedin-posts-v1` | `linkedin-sync` on the droplet | none |
+| `admin-throttle:<ip>` | service, failed sign-ins | 15 min |
+| `external-sync-v1:<source>` | service, on each Substack push | 7 d |
+Left over from the retired feed pipeline (harmless, can be deleted): `writing-feed-v4`, `feed-src-v1:*`, `feed-status-v1`, `linkedin-posts-v1`.
+
+## Environment (Pages dashboard)
+`RESEND_API_KEY`, `RESEND_FROM_EMAIL` (noreply@vizneo.com), `MOTETHANSEN_TURNSTILE_SECRET` for the contact form. Local `.env` is gitignored.
 
 ## Key design decisions
-- **ASSETS.fetch() rewrite** in middleware — not a 301 redirect — so
-  `michael.motethansen.com` serves `/resume/` content without changing the URL.
-- **ORCID publications** fetched client-side from `https://pub.orcid.org/v3.0/0000-0001-7645-5958/works`
-  — no server function needed, public API supports CORS.
-- **Writing feed sources**: 2 live Substack RSS feeds (ULW, Vizneo Academy) +
-  LinkedIn articles. Medium and the personal Medium feed were removed.
-- **LinkedIn is dynamic via KV**: `functions/api/writing.js` and the Worker read
-  KV key `linkedin-posts-v1` (a JSON array), falling back to the `content/linkedin-posts.js`
-  seed when empty. The `linkedin-sync/` DO job populates that key, so new LinkedIn
-  articles appear with no redeploy. (LinkedIn has no public article API — that job is
-  the only way to automate it.)
-- **One feed core, two callers**: `shared/feed-core.js` is imported by both the Pages
-  Function and the cron Worker. They used to carry byte-identical copies behind
-  "keep in sync" comments, and they drifted — the per-feed item cap got fixed in one
-  copy only. Never fork this logic back into the entry points.
-- **KV cache strategy — per-source fallback**: the Worker (cron, hourly) and the
-  Pages Function both write the FULL merged list to `writing-feed-v4`. Each source
-  ALSO keeps its own last-known-good snapshot under `feed-src-v1:<sourceId>` (14d TTL).
-  On rebuild, a source that fails — or that returns 200 but parses to **0 items**, i.e.
-  a challenge page — is served from its snapshot rather than silently dropped. Rules:
-  - a build is **complete** only when *every* source contributed posts;
-  - only a complete build is cached — 6h TTL, or **90min** if any source came from a
-    snapshot. Both MUST exceed the cron interval: a shorter TTL leaves an uncached
-    window each hour in which every visitor request re-fetches every upstream feed.
-    That shipped once (30min vs hourly cron) and Substack started returning HTTP 429;
-  - an incomplete build is served but never persisted.
-  The old guard only required "≥1 Substack feed loaded", so a build where Urban Life
-  Works was blocked but Vizneo succeeded counted as healthy and cached a feed missing
-  a whole publication for 30h. That was the "Substack articles disappeared" bug.
-- **Substack edge-fetch**: `fetchFeed` requests the RSS feeds with a **real browser
-  User-Agent**, **no `cf: { cacheEverything }`**, and one retry. Substack blocks
-  bot-ish UAs from Cloudflare egress *intermittently and per publication* (seen as
-  403 and 429), and `cacheEverything` could pin that block response at the edge. KV is
-  the only cache layer; the edge does no subrequest caching. Substack serves these
-  feeds 200 to a residential IP and **403 to both droplets**, so if Cloudflare is ever
-  blocked outright the options are `scripts/warm-feed-cache.mjs` from a residential
-  machine, or a proxy.
-- **Diagnosing a missing publication**: `curl https://motethansen.com/api/writing?debug=1`
-  → per-source `status` (`live` / `snapshot` / `missing`), counts, and the fetch error.
-  This bypasses the merged cache and writes nothing, so it is safe to hit any time.
-- **How new posts reach the site (freshness budget)**: nothing pushes to this site —
-  every path is polling, so latency == poll rate.
-  - **Substack: fully automatic.** Cron Worker polls hourly → new post live within ~1h.
-  - **LinkedIn: automatic, twice a day, on the droplet.** `linkedin_discover.py`
-    reads the **public profile page** (no login cookie — the `/pulse/` links are in
-    the HTML) and hands new URLs to the existing metadata+KV pipeline. After a KV
-    write that changed the count it pings the Worker `/refresh`, so the site updates
-    in seconds rather than waiting for the hourly cron.
-  - **Why only twice a day** (measured 2026-07-28/30): that profile page is aggressively
-    **rate limited per IP**, tripping after only ~6–10 requests. Identical requests from
-    a droplet went 200 (fresh) → 2/12 (after ~30) → 0/12 (after ~60), for curl, requests
-    and urllib alike; it recovers once the IP is quiet. So polling more often makes
-    discovery *less* reliable. `linkedin_discover.fetch_profile` retries 4× with spaced,
-    jittered backoff — verified getting through from an already-throttled IP.
-  - **Don't A/B headers against that wall.** A single trial looks causal but is noise
-    from a probabilistic limiter; only repeated trials mean anything. Probing at all
-    consumes that host's budget.
-  - **Cloudflare Workers egress is blocked outright** (HTTP 999) — that is why
-    discovery cannot live in the feed-refresh Worker. The droplets are fine when quiet.
-  - Discovery is **best-effort**: if it's walled for a whole run, the job continues
-    with `article-urls.txt` and just doesn't find new articles that time.
-  - **Authorship guard**: the profile page can surface other people's posts, so a
-    discovered article is only published if its JSON-LD author matches
-    `LINKEDIN_AUTHOR_MATCH` (default `hansen`); curated URLs are trusted as-is.
-  - Want it live immediately instead of waiting for the next run:
-    `docker compose run --rm sync --add-url "https://www.linkedin.com/pulse/…"`
-- **Archive page**: `/writing/` lists all articles with client-side search;
-  homepage shows top 9 and links to it via a "View all N articles" button when total > 9.
-- **Brand mark**: the smart-city bulb, `public/assets/img/logo-smartcity.png` (512px, transparent).
-  The source art had an opaque white square; the exterior white is flood-filled to alpha 0 while the
-  white *inside* the glass is kept, so the mark sits on the paper background without a card behind it.
-  Shown in the nav, the homepage hero (absolutely positioned in the empty right column — it adds no
-  reflow, and is hidden below 880px), and the footer.
-- **Favicon**: `/favicon.svg` is a hand-simplified redraw of the mark — the real skyline turns to mush
-  below ~24px. `assets/img/favicon-48.png` is the PNG fallback and `assets/img/apple-touch-icon.png`
-  the opaque iOS icon. Regenerate the PNGs from the 512px logo, not from the original artwork.
-- **Resume journey banner**: `public/resume/index.html` opens with a rail of seven country
-  stops (flags drawn as inline SVG symbols — flag emoji do not render on Windows). Org marks
-  live in `public/assets/img/career/`, ~52KB for twelve. How they were produced, because it
-  is not reproducible by eye: `.ai` files are PDFs — `pdftocairo -svg`, then
-  `inkscape --export-area-drawing` to crop off the A4 page, then re-add the `viewBox`
-  inkscape drops (without it an `<img>` cannot scale the SVG). Intricate seals (UCPH,
-  Thammasat) are rasterised to 3× PNG — far smaller than their 36–128KB vector originals at
-  a 34px render. Supplied PNGs are trimmed to their bbox and quantised to 128 colours.
-  Marks are bounded by `max-width:100%` + `--mh` rather than a fixed height, because the
-  ratios run 0.69 (DTU) to 4.67 (Pitney Bowes). The banner is hidden in print.
-- **Light theme (warm paper)**: `--color-bg: #fbfaf7`, cards white, ink `#16233a` and `#2f5a84`
-  sampled off the bulb. Purple `#6b4fe0` and teal `#0d7d71` are the accents — both were lightened
-  for the old dark theme and had to be *darkened* here to clear 4.5:1 on paper; same for the Substack
-  badge (`#b4430b`, not `#ff6719`). `public/resume/index.html` carries its own copy of these tokens
-  in its inline `<style>`; change both together.
-
-## Agents & machines
-| Agent | Model | Machine | Role |
-|---|---|---|---|
-| Claude Code | Claude Opus 5 (1M context) | MacBook Pro (development only) | Dev agent — code, deploy |
-| Codex | Codex Sonnet 4.6 | MacBook Pro (development only) | Dev agent — code, deploy |
-
-Machines are for **development only** — production runs on the droplets and
-Cloudflare. Update the model column when you switch models; it goes stale silently.
-
-## Owner
-Michael Motet Hansen — hansenmichaelmotet@gmail.com
-ORCID: 0000-0001-7645-5958
-
-## /admin — Markdown article editor (shared articles service)
-Write, preview, publish and delete articles at `motethansen.com/admin`; they are live at once (no deploy).
-
-- **Service:** `workers/articles/` is the Worker `motethansen-articles` (no public URL; reached by service binding
-  `ARTICLES` from the site). Owns sign-in, the article API, public article pages, RSS, `index.json` and image serving.
-  vizneo.com is meant to bind to the same Worker (add `"vizneo"` to `ENABLED_SITES` in `src/sites.js` and give it a template).
-- **Storage:** D1 `motethansen-articles` (schema in `workers/articles/schema.sql`, applied by `deploy.sh`), R2 `motethansen-media`
-  (uploaded images, served at `/media/...`). Markdown is the source; HTML is rendered per request (raw HTML is escaped).
-- **Site wiring:** Pages Functions `functions/api/admin/[[path]].js`, `functions/media/[[path]].js` and
-  `functions/writing/[[path]].js` forward to the service; `functions/api/writing.js` merges published articles into the feed at request time.
-- **Auth:** username/password (Worker secrets `ADMIN_USER`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`; set with `wrangler secret put`
-  in `workers/articles/`), HMAC-signed 12 h cookie, 5 failures / 15 min lockout per IP, same-origin check on every write,
-  strict CSP in `public/_headers`. Pages itself holds no admin secrets.
-- **Deploy:** `./deploy.sh` (service, then Pages, then the feed Worker). `wrangler pages deploy` from a branch other than `main` goes to
-  a preview URL (`<branch>.motethansen-site.pages.dev`), a safe place to test; production needs `main`.
-- **Tests:** `node --test tests/` (needs `npm install` in `workers/articles/` for markdown-it).
-- LinkedIn is no longer used (it challenges every non-browser client, 2026-11-13).
+- **ASSETS.fetch() rewrite** in middleware, not a 301, so `michael.motethansen.com` serves `/resume/` without changing the URL.
+- **ORCID publications** are fetched client-side from `pub.orcid.org` (public API, CORS).
+- **Dev machines are for development only**; production work runs on a droplet or in Cloudflare. The one exception is the Substack pull,
+  which needs a non-Cloudflare IP and runs on the thinkpad (fleet server).
+- **Droplet 188.166.215.225 (WD-Ubuntu)** used to run the LinkedIn sync; its timers are disabled and its `/opt/motethansen-site` checkout is unused.

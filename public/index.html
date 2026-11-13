@@ -342,7 +342,7 @@
         }
         grid.innerHTML = posts.map(p => {
           const date = p.date ? new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-          const platformClass = p.platform === 'Substack' ? 'badge--substack' : 'badge--linkedin';
+          const platformClass = p.platform === 'Substack' ? 'badge--substack' : p.platform === 'LinkedIn' ? 'badge--linkedin' : 'badge--native';
           const img = p.image
             ? `<img class="wcard__img" src="${escAttr(p.image)}" alt="" loading="lazy">`
             : `<div class="wcard__img wcard__img--blank"></div>`;

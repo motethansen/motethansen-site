@@ -767,6 +767,12 @@ a.pub-item__title:hover {
   color: #0a66c2;
 }
 
+/* Articles written on this site (platform = the site's own host) */
+.badge--native {
+  background: rgba(107, 79, 224, 0.10);
+  color: var(--color-accent-hover);
+}
+
 .wcard__source {
   font-size: 0.78rem;
   font-weight: 600;
