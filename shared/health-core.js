@@ -1,44 +1,30 @@
 /**
  * Pure health computation for GET /api/health (Vantage component-health contract, Mode B).
  *
- * Deliberately NOT a live probe. /api/writing?debug=1 re-fetches both Substack feeds on
- * every call, so a monitor polling that would multiply the traffic Substack already
- * answers with HTTP 429. Instead this reads two status records the jobs leave behind:
- *
- *   feed-status-v1           written hourly by the feed-refresh Worker
- *   linkedin-sync-status-v1  written twice daily by linkedin-sync on droplet 188
+ * Deliberately NOT a live probe. /api/writing?debug=1 re-fetches both Substack feeds on every call, so a
+ * monitor polling that would multiply the traffic Substack already answers with HTTP 429. Instead this reads
+ * the status record the hourly feed-refresh Worker leaves in KV (feed-status-v1).
  *
  * Rules:
- *   - a Substack source on its snapshot is normal noise for a run or two; it becomes
- *     "degraded" only after it has been stale for SOURCE_STALE_AFTER_S
+ *   - a Substack source on its snapshot is normal noise for a run or two; it becomes "degraded" only after it
+ *     has been stale for SOURCE_STALE_AFTER_S
  *   - an hourly refresh that has not reported for FEED_MAX_AGE_S is "degraded"
- *   - the LinkedIn sync not reporting for LINKEDIN_MAX_AGE_S is "degraded"
- *   - LinkedIn discovery walled means new articles can only arrive by hand: "degraded"
+ *   - an incomplete feed (a publication with no live data and no snapshot) is "degraded"
  */
 
 export const FEED_STATUS_KEY = "feed-status-v1";
-export const LINKEDIN_STATUS_KEY = "linkedin-sync-status-v1";
-/** Written by linkedin-sync/admin_poll.py on the droplet about every 10 minutes (see HEARTBEAT_EVERY_S there). */
-export const POLLER_STATUS_KEY = "linkedin-poll-status-v1";
-export const POLLER_MAX_AGE_S = 15 * 60;         // one heartbeat missed, plus margin
-export const PENDING_MAX_AGE_S = 10 * 60;        // an address queued from /admin should be picked up within ~1 min
 
 export const FEED_MAX_AGE_S = 3 * 3600;          // hourly cron + 2 missed runs
 export const SOURCE_STALE_AFTER_S = 3 * 3600;    // ~3 consecutive 429s
-export const LINKEDIN_MAX_AGE_S = 20 * 3600;     // twice daily (12 h) + margin
 
 /** "18 min" under 90 minutes, "3.5 h" above. */
 const hours = s => (s < 5400 ? `${Math.max(1, Math.round(s / 60))} min` : `${Math.round(s / 360) / 10} h`);
 
 /**
- * @param {object|null} feed      feed-status-v1: { ts, complete, degraded, sources:[{id,status,count,error,staleSince}] }
- * @param {object|null} linkedin  linkedin-sync-status-v1: { ts, discovery, collected, total, new }
- * @param {number} nowS           epoch seconds
- * @param {{poller:object|null, pending:number, oldestPendingS:number|null}} [queue]
- *        the /admin queue: the droplet poller's heartbeat and the age of the oldest unprocessed address.
- *        Omit to skip those two checks.
+ * @param {object|null} feed  feed-status-v1: { ts, complete, degraded, sources:[{id,status,count,error,staleSince}] }
+ * @param {number} nowS       epoch seconds
  */
-export function computeHealth(feed, linkedin, nowS, queue) {
+export function computeHealth(feed, nowS) {
   const errors = [];
   const checks = {};
   let status = "up";
@@ -58,31 +44,6 @@ export function computeHealth(feed, linkedin, nowS, queue) {
       if (stale > SOURCE_STALE_AFTER_S) {
         degrade(`${s.id} served from its snapshot for ${hours(stale)}: ${s.error || "upstream failing"}`);
       }
-    }
-  }
-
-  if (!linkedin) {
-    degrade("linkedin-sync has not written a status record yet");
-    checks.linkedin_sync = false;
-  } else {
-    const age = nowS - linkedin.ts;
-    checks.linkedin_sync = age <= LINKEDIN_MAX_AGE_S;
-    if (!checks.linkedin_sync) degrade(`linkedin-sync last reported ${hours(age)} ago (runs twice daily)`);
-    checks.linkedin_discovery = linkedin.discovery === "ok";
-    if (linkedin.discovery === "walled") {
-      degrade("LinkedIn discovery is walled (HTTP 999): new articles reach the site only if added by hand");
-    }
-  }
-
-  if (queue) {
-    const hb = queue.poller;
-    checks.admin_poller = !!hb && nowS - hb.ts <= POLLER_MAX_AGE_S;
-    if (!hb) degrade("the /admin queue poller on the droplet has not reported yet");
-    else if (!checks.admin_poller) degrade(`the /admin queue poller last reported ${hours(nowS - hb.ts)} ago (every minute, heartbeat every 10 min)`);
-    const age = queue.oldestPendingS == null ? 0 : nowS - queue.oldestPendingS;
-    checks.admin_queue = !(queue.pending > 0 && age > PENDING_MAX_AGE_S);
-    if (!checks.admin_queue) {
-      degrade(`${queue.pending} address(es) from /admin have waited ${hours(age)} without being published`);
     }
   }
 

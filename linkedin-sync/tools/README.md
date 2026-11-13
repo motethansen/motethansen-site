@@ -173,24 +173,3 @@ script regardless of what is passed.) Or log in to the droplet and run
 
 Re-running `handoff_urls.py` itself does not retry the sync: the URL is already
 listed, so it exits 0 with `no new URLs to add` before reaching SSH.
-
-## Publishing a new LinkedIn article: `li_add.py`
-
-Paste the address, nothing else:
-
-```sh
-li-add https://www.linkedin.com/pulse/my-new-article-michael-hansen-abc12/
-```
-
-It validates the address, appends it to the droplet's live `article-urls.txt` over SSH, runs the sync
-once with `--no-discover` (no extra hits on the walled profile page), then waits until
-`motethansen.com/api/writing` lists the article and prints `LIVE: <url>`. If the site has not shown it
-within 150 s it exits 4; the hourly refresh then picks it up. Several addresses can be given at once.
-
-Setup (once): an SSH alias for the droplet in `~/.ssh/config`, `MOTETHANSEN_DROPLET_SSH=<alias>` in
-`~/.zshenv`, and `ln -s <repo>/linkedin-sync/tools/li_add.py ~/.local/bin/li-add`.
-
-Difference from `handoff_urls.py`: that one routes through git (and needs a clean `main` clone plus
-deploy keys); this one writes to the droplet directly. `sync-from-git.sh` unions the droplet's list with
-git's, so a later redeploy loses nothing. A run that skips discovery leaves the `/api/health`
-record untouched, so `li-add` never hides the LinkedIn wall.
