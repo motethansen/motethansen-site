@@ -32,7 +32,37 @@ md.renderer.rules.image = (tokens, idx, opts, env, self) => {
   return imageRule(tokens, idx, opts, env, self);
 };
 
-export const renderMarkdown = src => md.render(String(src || ""));
+// ---- YouTube: a line that is nothing but a YouTube address becomes a player (privacy-enhanced domain, lazy-loaded).
+// A link with its own text ([Watch](https://youtu.be/...)) stays a plain link. Only an 11-character video id is ever
+// placed in the iframe address, so nothing from the pasted text can change where the frame points.
+const YOUTUBE = /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])(?:[?&#/].*)?$/;
+export const youtubeId = url => (String(url).match(YOUTUBE) || [])[1] || null;
+
+md.core.ruler.push("youtube_embed", state => {
+  const t = state.tokens;
+  for (let i = 0; i + 2 < t.length; i++) {
+    if (t[i].type !== "paragraph_open" || t[i + 1].type !== "inline" || t[i + 2].type !== "paragraph_close") continue;
+    const kids = t[i + 1].children || [];
+    if (kids.length !== 3 || kids[0].type !== "link_open" || kids[1].type !== "text" || kids[2].type !== "link_close") continue;
+    const href = kids[0].attrGet("href") || "";
+    const id = kids[1].content === href ? youtubeId(href) : null;           // bare address only
+    if (!id) continue;
+    const tok = new state.Token("youtube_embed", "", 0);
+    tok.meta = { id, href };
+    t.splice(i, 3, tok);
+  }
+});
+
+md.renderer.rules.youtube_embed = (tokens, idx, opts, env) => {
+  const { id, href } = tokens[idx].meta;
+  if (env && env.embeds === false) {                                        // RSS and other places where frames are stripped
+    return `<p><a href="https://www.youtube.com/watch?v=${id}" rel="noopener noreferrer">Watch the video on YouTube</a></p>\n`;
+  }
+  return `<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="YouTube video" loading="lazy" ` +
+    `referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>\n`;
+};
+
+export const renderMarkdown = (src, { embeds = true } = {}) => md.render(String(src || ""), { embeds });
 
 /** Plain-text excerpt for descriptions when none was written. */
 export function excerpt(src, n = 180) {

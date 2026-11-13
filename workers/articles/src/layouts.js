@@ -49,7 +49,8 @@ const motethansen = {
 .article__body blockquote{margin:1.4rem 0;padding:.2rem 1.2rem;border-left:3px solid var(--color-accent);color:var(--color-text-muted)}
 .article__body pre{overflow-x:auto;padding:1rem;background:var(--color-bg-alt);border-radius:8px}
 .article__body a{color:var(--color-accent)}
-.article__tags{margin-top:2.4rem;color:var(--color-text-soft);font-size:.9rem}`,
+.article__tags{margin-top:2.4rem;color:var(--color-text-soft);font-size:.9rem}
+.video{position:relative;aspect-ratio:16/9;margin:1.8rem 0}.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:8px}`,
 };
 
 // vizneo.com is a Vite/React SPA with hashed asset names, so pages rendered here carry their own small stylesheet
@@ -78,6 +79,7 @@ const vizneo = {
   .article__body blockquote{margin:1.5rem 0;padding:.1rem 1.2rem;border-left:3px solid var(--navy);color:var(--muted)}
   .article__body pre{overflow-x:auto;padding:1rem;background:#f1eee4;border-radius:8px}
   .article__tags{margin-top:2.4rem;color:var(--muted);font-size:.9rem}
+  .video{position:relative;aspect-ratio:16/9;margin:1.8rem 0}.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:8px}
   .list{list-style:none;padding:0;margin:2rem 0 0} .list li{padding:1.4rem 0;border-top:1px solid var(--line)}
   .list a.t{font:600 1.35rem/1.3 var(--serif);text-decoration:none} .list p{margin:.3rem 0 0;color:var(--muted)}
   .list .d{font-size:.88rem;color:var(--muted)}

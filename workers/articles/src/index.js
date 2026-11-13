@@ -58,7 +58,7 @@ export async function route(request, env, deps = {}) {
   if (path === "/writing/rss.xml") {
     const list = (await store.listArticles(env.DB, { status: "published", site, limit: 30, external: false }));
     const full = await Promise.all(list.map(a => store.getById(env.DB, a.id)));
-    return new Response(rssFeed(site, full, full.map(a => renderMarkdown(a.body_md))), {
+    return new Response(rssFeed(site, full, full.map(a => renderMarkdown(a.body_md, { embeds: false }))), {
       headers: { "Content-Type": "application/rss+xml; charset=utf-8", "Cache-Control": "public, max-age=300" },
     });
   }
@@ -78,7 +78,7 @@ export async function route(request, env, deps = {}) {
 
 /** The editor page and its scripts, served from this Worker's own assets so every site shares one copy. */
 const ADMIN_HEADERS = {
-  "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' https:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+  "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' https:; frame-src https://www.youtube-nocookie.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
   "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer",
   "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow",
 };

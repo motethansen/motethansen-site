@@ -1,6 +1,8 @@
 // Article list and Markdown editor.
 import { htmlToMarkdown, importableImages } from "./html2md.js";
 
+const YOUTUBE_URL = /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)[A-Za-z0-9_-]{11}(?![A-Za-z0-9_-])/;
+
 const $ = id => document.getElementById(id);
 
 const slugify = t => t.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/&/g, " and ")
@@ -235,6 +237,15 @@ export function initEditor({ api, show }) {
     code: () => wrap("`", "`", "code"),
     link: () => { const url = prompt("Link address (https://…)"); if (url) wrap("[", `](${url})`, "link text"); },
     image: () => { pendingInsert = true; $("file").click(); },
+    video: () => {
+      const url = (prompt("YouTube address (https://www.youtube.com/watch?v=… or https://youtu.be/…)") || "").trim();
+      if (!url) return;
+      if (!YOUTUBE_URL.test(url)) { say("ed-msg", "That does not look like a YouTube video address."); return; }
+      const s = ta.selectionStart;
+      ta.setRangeText(`\n\n${url}\n\n`, s, ta.selectionEnd, "end");     // a line of its own is what makes it a player
+      ta.focus(); ta.dispatchEvent(new Event("input"));
+      say("ed-msg", "Video added. It plays in the preview and on the published page.", true);
+    },
   };
   document.querySelectorAll(".toolbar [data-fmt]").forEach(b => b.addEventListener("click", () => FMT[b.dataset.fmt]()));
   ta.addEventListener("keydown", e => {

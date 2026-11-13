@@ -44,6 +44,10 @@ function render(node, depth = 0, inPre = false) {
   if (node.nodeType === 3) return inPre ? node.nodeValue : esc(node.nodeValue.replace(/\s+/g, " "));
   if (node.nodeType !== 1) return "";
   const tag = node.tagName;
+  if (tag === "IFRAME") {                                                    // a pasted YouTube player becomes its address on its own line
+    const m = (node.getAttribute("src") || "").match(/^(?:https?:)?\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])/);
+    return m ? `\n\nhttps://www.youtube.com/watch?v=${m[1]}\n\n` : "";
+  }
   if (SKIP.has(tag)) return "";
   const kids = () => [...node.childNodes].map(c => render(c, depth, inPre)).join("");
 

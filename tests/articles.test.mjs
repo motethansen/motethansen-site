@@ -484,3 +484,53 @@ test("provisional entries: confirmed by the pull, or removed when the pull never
   const left = env.DB.raw.prepare("SELECT external_url FROM articles ORDER BY external_url").all().map(x => x.external_url);
   assert.deepEqual(left, [OLD, "https://urbanlifeworks.substack.com/p/ulw-one", PAGE].sort());
 });
+
+// ---------- YouTube embeds ----------
+import { youtubeId } from "../workers/articles/src/render.js";
+const VID = "dQw4w9WgXcQ";
+const player = h => h.match(/<iframe src="([^"]+)"/)?.[1];
+
+test("youtube: a bare address on its own line becomes a nocookie player, in every common form", () => {
+  for (const u of [`https://www.youtube.com/watch?v=${VID}`, `https://youtube.com/watch?v=${VID}&t=42s`, `https://www.youtube.com/watch?feature=share&v=${VID}`,
+    `https://youtu.be/${VID}`, `https://youtu.be/${VID}?t=30`, `https://m.youtube.com/watch?v=${VID}`, `https://www.youtube.com/shorts/${VID}`,
+    `https://www.youtube.com/embed/${VID}`, `https://www.youtube.com/live/${VID}`, `http://www.youtube.com/watch?v=${VID}`]) {
+    const h = renderMarkdown(`Before\n\n${u}\n\nAfter`);
+    assert.equal(player(h), `https://www.youtube-nocookie.com/embed/${VID}`, u);
+    assert.match(h, /<p>Before<\/p>[\s\S]*<div class="video">[\s\S]*<p>After<\/p>/);
+  }
+});
+test("youtube: only a lone address embeds; linked text, inline mentions and look-alike hosts stay ordinary", () => {
+  assert.doesNotMatch(renderMarkdown(`[Watch the talk](https://youtu.be/${VID})`), /<iframe/);            // explicit link text stays a link
+  assert.match(renderMarkdown(`[Watch the talk](https://youtu.be/${VID})`), /<a href="https:\/\/youtu\.be\//);
+  assert.doesNotMatch(renderMarkdown(`See https://youtu.be/${VID} for more`), /<iframe/);                // inside a sentence
+  assert.match(renderMarkdown(`- https://youtu.be/${VID}`), /<iframe/);                                   // a lone address in a list item is a video too
+  for (const bad of [`https://youtube.com.evil.com/watch?v=${VID}`, `https://evil.com/youtu.be/${VID}`, `https://www.youtube.com.evil.com/embed/${VID}`,
+    "https://www.youtube.com/watch?v=short", `https://www.youtube.com/watch?v=${VID}x`, `https://youtu.be/${VID}extra`, "https://www.youtube.com/channel/UCabcdefghijk",
+    `javascript:alert(1)//youtu.be/${VID}`, `https://notyoutube.com/watch?v=${VID}`]) {
+    assert.doesNotMatch(renderMarkdown(bad), /<iframe/, bad);
+    assert.equal(youtubeId(bad), null, bad);
+  }
+});
+test("youtube: the frame address can only ever contain an 11-character id", () => {
+  const h = renderMarkdown(`https://www.youtube.com/watch?v=${VID}&x="><script>alert(1)</script>`);
+  assert.doesNotMatch(h, /<script/);
+  const src = player(h); assert.ok(!src || /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}$/.test(src));
+});
+test("youtube: RSS gets a link instead of a frame; published pages and the editor preview get the player", async () => {
+  const env = makeEnv(); const cookie = await signedIn(env);
+  const a = await make(env, cookie, { title: "With video", body_md: `Intro\n\nhttps://youtu.be/${VID}\n\nOutro` });
+  await call(env, `/api/admin/articles/${a.id}/publish`, { method: "POST", cookie });
+  const page = await (await call(env, "/writing/with-video/")).text();
+  assert.match(page, /youtube-nocookie\.com\/embed\/dQw4w9WgXcQ/); assert.match(page, /\.video\{position:relative;aspect-ratio:16\/9/);
+  const rss = await (await call(env, "/writing/rss.xml")).text();
+  assert.doesNotMatch(rss, /<iframe/); assert.match(rss, /Watch the video on YouTube/);
+  const prev = await (await call(env, "/api/admin/preview", { method: "POST", cookie, body: { body_md: `https://youtu.be/${VID}` } })).json();
+  assert.match(prev.html, /<iframe/);
+  const viz = await (await vcall(env, "/writing/with-video/")).text();      // not published on vizneo.com
+  assert.doesNotMatch(viz, /iframe/);
+});
+test("the editor's security policy allows only the privacy-enhanced YouTube frame", async () => {
+  const env = { ...makeEnv(), ASSETS: { fetch: async () => new Response("x") } };
+  const csp = (await call(env, "/admin/")).headers.get("content-security-policy");
+  assert.match(csp, /frame-src https:\/\/www\.youtube-nocookie\.com;/); assert.match(csp, /default-src 'none'/);
+});
