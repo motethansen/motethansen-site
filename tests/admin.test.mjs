@@ -4,8 +4,7 @@ import {
   checkCredentials, signSession, verifySession, throttleState, recordFailure,
   THROTTLE_MAX_FAILS, THROTTLE_WINDOW_S,
 } from "../shared/admin-core.js";
-import { onRequestPost as login } from "../functions/api/admin/login.js";
-import { onRequestGet as me } from "../functions/api/admin/me.js";
+import { login, me } from "../workers/articles/src/auth.js";
 
 const NOW = 1_800_000_000;
 const ENV = { ADMIN_USER: "michael", ADMIN_PASSWORD: "correct horse battery", ADMIN_SESSION_SECRET: "s3cret-s3cret-s3cret" };

@@ -15,6 +15,14 @@ unset CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_EMAIL
 # account this site lives in (same as workers/feed-refresh/wrangler.toml).
 export CLOUDFLARE_ACCOUNT_ID=f999794776f99de37612b4abbfbfc21a
 
+echo "▶ Deploying the articles service (D1 schema + Worker)..."
+cd "$REPO/workers/articles"
+npm ci --silent
+wrangler d1 execute motethansen-articles --remote --file=schema.sql >/dev/null
+wrangler deploy
+cd "$REPO"
+
+echo ""
 echo "▶ Deploying Pages site..."
 wrangler pages deploy public --project-name motethansen-site --commit-dirty=true
 

@@ -35,7 +35,7 @@ export async function onRequestGet({ request, env }) {
   // 1. Serve the cached full list if present.
   if (env.SITE_KV) {
     const cached = await kvGetJson(env, CACHE_KEY);
-    if (Array.isArray(cached)) return feedResponse(cached, wantAll, true);
+    if (Array.isArray(cached)) return feedResponse(await withNative(env, cached), wantAll, true);
   }
 
   // 2. Rebuild from live sources (each with its own last-known-good fallback).
@@ -44,7 +44,27 @@ export async function onRequestGet({ request, env }) {
   // 3. Persist only a complete build — never cache a feed missing a publication.
   await cacheFeed(env, build);
 
-  return feedResponse(build.posts, wantAll, false);
+  return feedResponse(await withNative(env, build.posts), wantAll, false);
+}
+
+/**
+ * Articles written in /admin live in the articles service (D1), not in the Substack/LinkedIn cache, so they
+ * are merged in at request time: a newly published article shows up at once instead of at the next hourly
+ * rebuild. Best-effort by design — if the service is unreachable the feed is simply what it was before.
+ */
+async function withNative(env, posts) {
+  if (!env.ARTICLES) return posts;
+  try {
+    const res = await env.ARTICLES.fetch("https://motethansen.com/writing/index.json");
+    if (!res.ok) return posts;
+    const native = (await res.json()).articles || [];
+    const seen = new Set(native.map((p) => p.url));
+    const merged = [...native, ...posts.filter((p) => !seen.has(p.url))];
+    return merged.sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
+  } catch (e) {
+    console.warn("[writing] native articles unavailable:", e?.message);
+    return posts;
+  }
 }
 
 export async function onRequestOptions() {
@@ -109,7 +129,7 @@ function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json",
-               "Cache-Control": "public, max-age=3600", ...corsHeaders() },
+               "Cache-Control": "public, max-age=60", ...corsHeaders() },
   });
 }
 

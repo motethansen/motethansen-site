@@ -247,8 +247,20 @@ Cloudflare. Update the model column when you switch models; it goes stale silent
 Michael Motet Hansen — hansenmichaelmotet@gmail.com
 ORCID: 0000-0001-7645-5958
 
-## /admin — sign-in shell (article editor to come)
-`public/admin/` + `functions/api/admin/{login,logout,me}.js` + `shared/admin-core.js|admin-http.js`. Username/password
-(Pages secrets `ADMIN_USER`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`), HMAC-signed 12 h cookie, 5 failures / 15 min
-lockout per IP, same-origin check on POSTs, strict CSP in `public/_headers`. LinkedIn is no longer used (it challenges
-every non-browser client, 2026-11-13); the LinkedIn address queue, droplet poller and `li-add` were removed.
+## /admin — Markdown article editor (shared articles service)
+Write, preview, publish and delete articles at `motethansen.com/admin`; they are live at once (no deploy).
+
+- **Service:** `workers/articles/` is the Worker `motethansen-articles` (no public URL; reached by service binding
+  `ARTICLES` from the site). Owns sign-in, the article API, public article pages, RSS, `index.json` and image serving.
+  vizneo.com is meant to bind to the same Worker (add `"vizneo"` to `ENABLED_SITES` in `src/sites.js` and give it a template).
+- **Storage:** D1 `motethansen-articles` (schema in `workers/articles/schema.sql`, applied by `deploy.sh`), R2 `motethansen-media`
+  (uploaded images, served at `/media/...`). Markdown is the source; HTML is rendered per request (raw HTML is escaped).
+- **Site wiring:** Pages Functions `functions/api/admin/[[path]].js`, `functions/media/[[path]].js` and
+  `functions/writing/[[path]].js` forward to the service; `functions/api/writing.js` merges published articles into the feed at request time.
+- **Auth:** username/password (Worker secrets `ADMIN_USER`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`; set with `wrangler secret put`
+  in `workers/articles/`), HMAC-signed 12 h cookie, 5 failures / 15 min lockout per IP, same-origin check on every write,
+  strict CSP in `public/_headers`. Pages itself holds no admin secrets.
+- **Deploy:** `./deploy.sh` (service, then Pages, then the feed Worker). `wrangler pages deploy` from a branch other than `main` goes to
+  a preview URL (`<branch>.motethansen-site.pages.dev`), a safe place to test; production needs `main`.
+- **Tests:** `node --test tests/` (needs `npm install` in `workers/articles/` for markdown-it).
+- LinkedIn is no longer used (it challenges every non-browser client, 2026-11-13).

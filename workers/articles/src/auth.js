@@ -1,8 +1,8 @@
-/** POST /api/admin/login {username, password} -> sets the session cookie. */
+/** Sign-in endpoints. Cookie handling and credential checks live in shared/admin-core.js and admin-http.js. */
 import { checkCredentials, signSession, throttleState, recordFailure, THROTTLE_WINDOW_S } from "../../../shared/admin-core.js";
-import { json, sameOrigin, sessionCookie } from "../../../shared/admin-http.js";
+import { json, sameOrigin, sessionCookie, clearCookie, requireAdmin } from "../../../shared/admin-http.js";
 
-export async function onRequestPost({ request, env }) {
+export async function login({ request, env }) {
   if (!sameOrigin(request)) return json({ error: "Bad origin." }, 403);
   if (!env.ADMIN_SESSION_SECRET || !env.ADMIN_USER || !env.ADMIN_PASSWORD) {
     return json({ error: "Admin is not configured." }, 503);
@@ -25,4 +25,14 @@ export async function onRequestPost({ request, env }) {
   await env.SITE_KV.delete(key);
   const token = await signSession(env.ADMIN_SESSION_SECRET, body.username, now);
   return json({ ok: true }, 200, { "Set-Cookie": sessionCookie(token) });
+}
+
+export async function logout({ request }) {
+  if (!sameOrigin(request)) return json({ error: "Bad origin." }, 403);
+  return json({ ok: true }, 200, { "Set-Cookie": clearCookie() });
+}
+
+export async function me({ request, env }) {
+  const auth = await requireAdmin(request, env);
+  return auth instanceof Response ? auth : json({ user: auth.user });
 }

@@ -1,0 +1,9 @@
+{
+  "name": "motethansen-articles",
+  "private": true,
+  "type": "module",
+  "description": "Shared article service for motethansen.com and vizneo.com: D1 + R2, Markdown editor API, public article pages",
+  "dependencies": {
+    "markdown-it": "^14.1.0"
+  }
+}

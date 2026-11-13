@@ -5,3 +5,8 @@ pages_build_output_dir = "public"
 [[kv_namespaces]]
 binding = "SITE_KV"
 id = "1b97cac1e10d4bcaaa1bef301a86af26"
+
+# Articles written in /admin: sign-in, editor API, public article pages and uploaded images.
+[[services]]
+binding = "ARTICLES"
+service = "motethansen-articles"
