@@ -65,10 +65,11 @@ const vizneo = {
   :root{--ink:#0b1220;--muted:#4b5563;--paper:#fafaf7;--navy:#0b2547;--line:#e4dfd0;--serif:"Fraunces",Georgia,serif;--sans:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
   *{box-sizing:border-box} body{margin:0;background:var(--paper);color:var(--ink);font:400 1.05rem/1.7 var(--sans)}
   a{color:var(--navy)} .wrap{max-width:760px;margin:0 auto;padding:0 1.25rem}
-  .vh{border-bottom:1px solid var(--line);background:#fff} .vh .wrap{max-width:1100px;display:flex;align-items:center;gap:1.5rem;min-height:64px}
+  .vh{border-bottom:1px solid var(--line);background:#fff} .vh .wrap{max-width:1100px;display:flex;align-items:center;gap:.4rem 1.5rem;min-height:64px;flex-wrap:wrap}
   .vh__brand{display:flex;align-items:center;gap:.6rem;font:600 1.15rem var(--serif);color:var(--navy);text-decoration:none}
   .vh__brand img{width:32px;height:32px} .vh nav{margin-left:auto;display:flex;gap:1.4rem;flex-wrap:wrap}
   .vh nav a{text-decoration:none;font-weight:500;color:var(--muted)} .vh nav a:hover{color:var(--navy)}
+  @media (max-width:640px){.vh .wrap{padding-top:.7rem;padding-bottom:.7rem}.vh nav{margin-left:0;width:100%;gap:.2rem 1.1rem;font-size:.95rem}}
   main{padding:3rem 0 5rem} h1{font:600 clamp(2rem,5vw,2.9rem)/1.12 var(--serif);color:var(--navy);margin:.4rem 0 .6rem}
   .eyebrow{font:500 .78rem/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0}
   .article__meta{color:var(--muted);margin:0 0 1.8rem;font-size:.95rem}
@@ -80,9 +81,30 @@ const vizneo = {
   .article__body pre{overflow-x:auto;padding:1rem;background:#f1eee4;border-radius:8px}
   .article__tags{margin-top:2.4rem;color:var(--muted);font-size:.9rem}
   .video{position:relative;aspect-ratio:16/9;margin:1.8rem 0}.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:8px}
-  .list{list-style:none;padding:0;margin:2rem 0 0} .list li{padding:1.4rem 0;border-top:1px solid var(--line)}
-  .list a.t{font:600 1.35rem/1.3 var(--serif);text-decoration:none} .list p{margin:.3rem 0 0;color:var(--muted)}
-  .list .d{font-size:.88rem;color:var(--muted)}
+  .list-page main .wrap{max-width:1120px}
+  .cards{list-style:none;padding:0;margin:2.2rem 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1.8rem}
+  .card{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;transition:box-shadow .2s,transform .2s,border-color .2s}
+  .card:hover{box-shadow:0 14px 34px rgba(11,37,71,.12);transform:translateY(-3px);border-color:#cfc9b6}
+  .card__media{display:block;background:#e9e6da;aspect-ratio:16/9;overflow:hidden}
+  .card__media img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s}
+  .card:hover .card__media img{transform:scale(1.03)}
+  .card__body{display:flex;flex-direction:column;gap:.55rem;padding:1.3rem 1.4rem 1.5rem;flex:1}
+  .card--plain{border-top:4px solid var(--navy)}
+  .card__meta{margin:0;font-size:.8rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  .card__title{margin:0;font:600 1.3rem/1.28 var(--serif)} .card__title a{color:var(--navy);text-decoration:none}
+  .card__title a:hover{text-decoration:underline;text-underline-offset:3px}
+  .card__brief{margin:0;color:var(--muted);font-size:.98rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .card__cta{margin-top:auto;padding-top:.6rem;font-weight:600;color:var(--navy);text-decoration:none;display:inline-flex;gap:.4rem;align-items:center}
+  .card__cta span{transition:transform .2s} .card__cta:hover span,.card:hover .card__cta span{transform:translateX(4px)}
+  .card__cta:hover{text-decoration:underline;text-underline-offset:3px}
+  @media (min-width:820px){
+    .card--featured{grid-column:1/-1;flex-direction:row}
+    .card--featured .card__media{flex:1.25;aspect-ratio:auto;min-height:340px}
+    .card--featured .card__body{flex:1;justify-content:center;padding:2.2rem 2.4rem;gap:.8rem}
+    .card--featured .card__title{font-size:2rem;line-height:1.18}
+    .card--featured .card__brief{-webkit-line-clamp:6;font-size:1.05rem}
+  }
+  .card a:focus-visible{outline:3px solid #2563eb;outline-offset:3px;border-radius:4px}
   .vf{border-top:1px solid var(--line);padding:2rem 0;color:var(--muted);font-size:.92rem;text-align:center}
   </style>`,
   bodyOpen: `<header class="vh"><div class="wrap">

@@ -9,7 +9,7 @@
 import { login, logout, me } from "./auth.js";
 import { json, sameOrigin, requireAdmin } from "../../../shared/admin-http.js";
 import * as store from "./db.js";
-import { renderMarkdown, excerpt } from "./render.js";
+import { renderMarkdown, excerpt, firstImage, clip } from "./render.js";
 import { validateArticle, validateIngest } from "./validate.js";
 import { uploadImage, importImage, serveImage } from "./media.js";
 import { addByAddress } from "./substack.js";
@@ -65,7 +65,7 @@ export async function route(request, env, deps = {}) {
   if (path === "/writing" || path === "/writing/") {
     // motethansen.com keeps its static archive page (its Pages function never forwards this path); other sites render it here.
     const list = await store.listArticles(env.DB, { status: "published", site, limit: 500 });
-    return html(listPage(site, list), 200, { "Cache-Control": "public, max-age=60, s-maxage=120" });
+    return html(listPage(site, await toCards(env, list)), 200, { "Cache-Control": "public, max-age=60, s-maxage=120" });
   }
   const m = path.match(/^\/writing\/([a-z0-9][a-z0-9-]{1,98}[a-z0-9])\/?$/);
   if (m) {
@@ -74,6 +74,23 @@ export async function route(request, env, deps = {}) {
     return html(articlePage(site, a, renderMarkdown(a.body_md)), 200, { "Cache-Control": "public, max-age=60, s-maxage=120" });
   }
   return new Response("Not found", { status: 404 });
+}
+
+/**
+ * What each card on the archive shows. Linked-out entries carry their own cover and description. For an article written
+ * here, the cover is its cover image or else the first picture in its text, and a missing description becomes the
+ * opening words of the text, so every card has something to read.
+ */
+async function toCards(env, list) {
+  return Promise.all(list.map(async a => {
+    if (a.external_url) return { a, image: a.cover || null, brief: clip(a.description) };
+    const full = (!a.cover || !a.description) ? await store.getById(env.DB, a.id) : null;
+    return {
+      a,
+      image: a.cover || firstImage(full?.body_md),
+      brief: clip(a.description || excerpt(full?.body_md || "", 240)),
+    };
+  }));
 }
 
 /** The editor page and its scripts, served from this Worker's own assets so every site shares one copy. */

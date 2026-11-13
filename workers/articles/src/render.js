@@ -71,3 +71,17 @@ export function excerpt(src, n = 180) {
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/[#>*_`~-]+/g, " ").replace(/\s+/g, " ").trim();
   return text.length <= n ? text : text.slice(0, n - 1).replace(/\s+\S*$/, "") + "…";
 }
+
+/** The first image in a Markdown body that the site may show (our own storage or https), or null. */
+export function firstImage(src) {
+  for (const m of String(src || "").matchAll(/!\[[^\]]*\]\(([^)\s]+)[^)]*\)/g)) {
+    if (m[1].startsWith("/media/") || m[1].startsWith("https://")) return m[1];
+  }
+  return null;
+}
+
+/** Clip to about n characters at a word boundary, with an ellipsis. */
+export function clip(text, n = 220) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  return t.length <= n ? t : t.slice(0, n - 1).replace(/\s+\S*$/, "") + "…";
+}

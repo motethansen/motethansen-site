@@ -10,7 +10,7 @@ const absolute = (site, p) => (p && p.startsWith("/") ? SITES[site].origin + p :
 
 import { LAYOUTS } from "./layouts.js";
 
-function shell(site, { title, description, canonical, head = "", body }) {
+function shell(site, { title, description, canonical, head = "", body, bodyClass = "" }) {
   const L = LAYOUTS[site];
   return `<!DOCTYPE html>
 <html lang="en">
@@ -26,7 +26,7 @@ function shell(site, { title, description, canonical, head = "", body }) {
   ${L.headExtra}
   ${L.css ? `<style>${L.css}</style>` : ""}
 </head>
-<body>
+<body${bodyClass ? ` class="${bodyClass}"` : ""}>
   ${L.bodyOpen}
   ${body}
   ${L.bodyClose(new Date().getUTCFullYear())}
@@ -63,17 +63,31 @@ export function articlePage(site, a, bodyHtml) {
   return shell(site, { title: `${a.title} — ${SITES[site].name}`, description: a.description, canonical: url, head, body });
 }
 
-/** Server-rendered archive page (vizneo.com; motethansen.com keeps its static /writing/ page). */
-export function listPage(site, articles) {
+/**
+ * Server-rendered archive page (vizneo.com; motethansen.com keeps its static /writing/ page).
+ * `cards` = [{ a: article row, image: url|null, brief: string }]. Every card carries what a reader needs to decide:
+ * the cover (when there is one), the title, a short brief and a plain "read" link; the newest card with a cover is featured.
+ */
+export function listPage(site, cards) {
   const url = `${SITES[site].origin}/writing/`;
-  const items = articles.map(a => `<li>
-      <a class="t" href="${esc(articleUrl(site, a))}"${a.external_url ? ' target="_blank" rel="noopener"' : ""}>${esc(a.title)}</a>
-      <div class="d">${dateLong(a.published_at || a.created_at)}${a.external_url ? ` · ${esc(a.platform)}, ${esc(a.source)}` : ""}</div>
-      ${a.description ? `<p>${esc(a.description)}</p>` : ""}
-    </li>`).join("");
+  const featuredAt = cards.findIndex(c => c.image);
+  const items = cards.map((c, i) => {
+    const a = c.a, href = esc(articleUrl(site, a)), out = !!a.external_url;
+    const link = out ? ' target="_blank" rel="noopener"' : "";
+    const meta = [dateLong(a.published_at || a.created_at), out ? a.source : ""].filter(Boolean).map(esc).join(" · ");
+    return `<li class="card${i === featuredAt ? " card--featured" : ""}${c.image ? "" : " card--plain"}">
+      ${c.image ? `<a class="card__media" href="${href}"${link} tabindex="-1" aria-hidden="true"><img src="${esc(c.image)}" alt="" loading="${i < 3 ? "eager" : "lazy"}" decoding="async" referrerpolicy="no-referrer"></a>` : ""}
+      <div class="card__body">
+        <p class="card__meta">${meta}</p>
+        <h2 class="card__title"><a href="${href}"${link}>${esc(a.title)}</a></h2>
+        ${c.brief ? `<p class="card__brief">${esc(c.brief)}</p>` : ""}
+        <a class="card__cta" href="${href}"${link}>${out ? `Read on ${esc(a.platform)}` : "Read the full article"} <span aria-hidden="true">→</span></a>
+      </div>
+    </li>`;
+  }).join("");
   const body = `<p class="eyebrow">Writing</p><h1>Articles.</h1>
-    ${articles.length ? `<ul class="list">${items}</ul>` : `<p>Nothing published yet.</p>`}`;
-  return shell(site, { title: `Writing — ${SITES[site].name}`, description: `Articles from ${SITES[site].name}.`, canonical: url, body });
+    ${cards.length ? `<ul class="cards">${items}</ul>` : `<p>Nothing published yet.</p>`}`;
+  return shell(site, { title: `Writing — ${SITES[site].name}`, description: `Articles from ${SITES[site].name}.`, canonical: url, body, bodyClass: "list-page" });
 }
 
 /** Entry shape shared with the Substack posts the /writing page already lists. */
