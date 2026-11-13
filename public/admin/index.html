@@ -9,9 +9,8 @@
 </head>
 <body>
   <main>
-    <h1>Admin</h1>
-
-    <form id="login" hidden autocomplete="on">
+    <form id="login" class="narrow" hidden autocomplete="on">
+      <h1>Admin</h1>
       <label for="user">Username</label>
       <input id="user" name="username" type="text" autocomplete="username" required>
       <label for="pass">Password</label>
@@ -21,10 +20,92 @@
     </form>
 
     <section id="home" hidden>
-      <p>You are signed in. The article editor goes here.</p>
-      <button type="button" id="logout" class="link">Sign out</button>
+      <header class="bar">
+        <h1>Articles</h1>
+        <span class="spacer"></span>
+        <button type="button" id="new">New article</button>
+        <button type="button" id="logout" class="link">Sign out</button>
+      </header>
+      <nav class="tabs" aria-label="Filter">
+        <button type="button" data-status="" class="on">All</button>
+        <button type="button" data-status="draft">Drafts</button>
+        <button type="button" data-status="published">Published</button>
+      </nav>
+      <ul id="list" class="rows"></ul>
+      <p class="msg" id="list-msg" role="alert"></p>
+    </section>
+
+    <section id="editor" hidden>
+      <header class="bar">
+        <button type="button" id="back" class="link">← Articles</button>
+        <span id="state" class="chip"></span>
+        <span class="spacer"></span>
+        <a id="view" href="#" target="_blank" rel="noopener" hidden>View</a>
+        <button type="button" id="save" class="secondary">Save draft</button>
+        <button type="button" id="publish">Publish</button>
+        <button type="button" id="delete" class="danger" hidden>Delete</button>
+      </header>
+      <p class="msg" id="ed-msg" role="alert"></p>
+
+      <div class="grid">
+        <div class="col">
+          <label for="f-title">Title</label>
+          <input id="f-title" type="text" maxlength="200" autocomplete="off">
+
+          <div class="two">
+            <div>
+              <label for="f-slug">Address</label>
+              <input id="f-slug" type="text" maxlength="100" autocomplete="off" spellcheck="false">
+              <small id="slug-url"></small>
+            </div>
+            <div>
+              <label for="f-date">Publish date</label>
+              <input id="f-date" type="datetime-local">
+              <small>Empty = the moment you publish</small>
+            </div>
+          </div>
+
+          <label for="f-desc">Description <small>(shown in lists and link previews)</small></label>
+          <textarea id="f-desc" rows="2" maxlength="400"></textarea>
+
+          <label for="f-tags">Tags <small>(comma separated)</small></label>
+          <input id="f-tags" type="text" autocomplete="off">
+
+          <label>Cover image</label>
+          <div class="cover">
+            <img id="cover-img" alt="" hidden>
+            <input id="f-cover" type="text" placeholder="Upload, or paste an https:// address" autocomplete="off">
+            <button type="button" id="cover-up" class="secondary">Upload</button>
+            <button type="button" id="cover-clear" class="link">Remove</button>
+          </div>
+
+          <label for="f-body">Article <small>(Markdown)</small></label>
+          <div class="toolbar" role="toolbar" aria-label="Formatting">
+            <button type="button" data-fmt="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+            <button type="button" data-fmt="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+            <button type="button" data-fmt="h2" title="Heading">H2</button>
+            <button type="button" data-fmt="h3" title="Subheading">H3</button>
+            <button type="button" data-fmt="link" title="Link (Ctrl+K)">Link</button>
+            <button type="button" data-fmt="quote" title="Quote">&ldquo;&rdquo;</button>
+            <button type="button" data-fmt="list" title="Bulleted list">List</button>
+            <button type="button" data-fmt="code" title="Code">&lt;/&gt;</button>
+            <button type="button" data-fmt="image" title="Insert an image (or paste one)">Image</button>
+          </div>
+          <textarea id="f-body" rows="22" spellcheck="true"></textarea>
+
+          <label for="f-origin">Originally published at <small>(optional, for migrated articles)</small></label>
+          <input id="f-origin" type="url" placeholder="https://…" autocomplete="off">
+        </div>
+
+        <div class="col">
+          <p class="eyebrow">Preview</p>
+          <h2 id="pv-title" class="pv-title"></h2>
+          <div id="preview" class="prose"></div>
+        </div>
+      </div>
+      <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
     </section>
   </main>
-  <script src="/admin/admin.js" defer></script>
+  <script type="module" src="/admin/admin.js"></script>
 </body>
 </html>
