@@ -196,12 +196,12 @@ test("a cover uploaded through the API validates; arbitrary paths do not", async
 });
 
 // ---------- routing ----------
-test("public routes only answer GET/HEAD; unknown paths 404; vizneo.com is not enabled yet", async () => {
+test("public routes only answer GET/HEAD; unknown paths 404; vizneo.com is served too", async () => {
   const env = makeEnv();
   assert.equal((await call(env, "/writing/x-y-z/", { method: "POST" })).status, 405);
   assert.equal((await call(env, "/nope")).status, 404);
   const viz = await route(new Request("https://vizneo.com/writing/index.json"), env);
-  assert.equal(viz.status, 404);
+  assert.equal(viz.status, 200);
 });
 
 test("an article published for another site never appears on this one", async () => {
@@ -221,4 +221,98 @@ test("the cover is shown with a relative path (works on any host) but advertised
   const h = await (await call(env, "/writing/cover-page/")).text();
   assert.ok(h.includes(`<img class="article__cover" src="${url}"`));
   assert.ok(h.includes(`<meta property="og:image" content="https://motethansen.com${url}">`));
+});
+
+// ---------- vizneo.com as a second site ----------
+import { importAllowed, importImage } from "../workers/articles/src/media.js";
+const VIZ = "https://vizneo.com";
+// same helper but with the vizneo.com host
+const vcall = (env, path, { method = "GET", body, cookie, raw, headers = {} } = {}) =>
+  route(new Request(VIZ + path, {
+    method, headers: { ...(body ? { "content-type": "application/json" } : {}), origin: VIZ, ...(cookie ? { cookie } : {}), "cf-connecting-ip": "8.8.8.8", ...headers },
+    body: raw ?? (body ? JSON.stringify(body) : undefined),
+  }), env);
+async function vizSignedIn(env) {
+  const r = await vcall(env, "/api/admin/login", { method: "POST", body: { username: "michael", password: "correct horse battery" } });
+  assert.equal(r.status, 200); return r.headers.get("set-cookie").split(";")[0];
+}
+
+test("vizneo.com: articles created there default to the vizneo site, render with its template and canonical, and list/RSS/JSON", async () => {
+  const env = makeEnv(); const cookie = await vizSignedIn(env);
+  const a = await (await vcall(env, "/api/admin/articles", { method: "POST", cookie, body: { title: "From LinkedIn", body_md: "Body **here**", description: "migrated" } })).json();
+  assert.deepEqual(a.sites, ["vizneo"]);
+  await vcall(env, `/api/admin/articles/${a.id}/publish`, { method: "POST", cookie });
+
+  const page = await (await vcall(env, "/writing/from-linkedin/")).text();
+  assert.match(page, /rel="canonical" href="https:\/\/vizneo\.com\/writing\/from-linkedin\/"/);
+  assert.match(page, /vizneo_shape_logo_color\.svg/); assert.match(page, /Fraunces/);
+  assert.doesNotMatch(page, /motethansen/i);
+  assert.match(page, /<strong>here<\/strong>/);
+
+  const list = await (await vcall(env, "/writing/")).text();
+  assert.match(list, /From LinkedIn/); assert.match(list, /href="https:\/\/vizneo\.com\/writing\/from-linkedin\/"/);
+  assert.equal((await vcall(env, "/writing")).status, 200);
+
+  const idx = await (await vcall(env, "/writing/index.json")).json();
+  assert.equal(idx.articles[0].platform, "vizneo.com");
+  assert.match(await (await vcall(env, "/writing/rss.xml")).text(), /<link>https:\/\/vizneo\.com\/writing\/<\/link>/);
+
+  // and it is invisible on motethansen.com
+  assert.equal((await call(env, "/writing/from-linkedin/")).status, 404);
+  assert.equal((await (await call(env, "/writing/index.json")).json()).articles.length, 0);
+});
+test("an article can be published on both sites, and each serves its own canonical", async () => {
+  const env = makeEnv(); const cookie = await signedIn(env);
+  const a = await make(env, cookie, { title: "On both", sites: ["motethansen", "vizneo"] });
+  await call(env, `/api/admin/articles/${a.id}/publish`, { method: "POST", cookie });
+  assert.match(await (await call(env, "/writing/on-both/")).text(), /canonical" href="https:\/\/motethansen\.com\//);
+  assert.match(await (await vcall(env, "/writing/on-both/")).text(), /canonical" href="https:\/\/vizneo\.com\//);
+});
+test("config tells the editor which sites exist and which one it is on", async () => {
+  const env = makeEnv(); const cookie = await vizSignedIn(env);
+  const c = await (await vcall(env, "/api/admin/config", { cookie })).json();
+  assert.deepEqual(c.sites, ["motethansen", "vizneo"]); assert.equal(c.current, "vizneo");
+});
+
+// ---------- editor UI served by the Worker ----------
+test("the editor is served from assets with strict headers; /admin redirects to /admin/", async () => {
+  const env = { ...makeEnv(), ASSETS: { fetch: async () => new Response("<!doctype html>admin", { headers: { "content-type": "text/html" } }) } };
+  const r = await call(env, "/admin/");
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("content-security-policy"), /script-src 'self'/); assert.match(r.headers.get("content-security-policy"), /frame-ancestors 'none'/);
+  assert.equal(r.headers.get("x-frame-options"), "DENY"); assert.equal(r.headers.get("cache-control"), "no-store");
+  const redirect = await call(env, "/admin");
+  assert.equal(redirect.status, 308); assert.match(redirect.headers.get("location"), /\/admin\/$/);
+  assert.equal((await call(env, "/admin/x", { method: "POST" })).status, 405);
+});
+
+// ---------- importing pasted images (SSRF-safe) ----------
+test("image import: only LinkedIn/Substack CDN hosts over plain https, no credentials, no tricks", () => {
+  for (const ok of ["https://media.licdn.com/dms/image/v2/abc/x.jpg", "https://media-exp1.licdn.com/a.png", "https://substackcdn.com/image/fetch/a.png",
+    "https://substack-post-media.s3.amazonaws.com/public/images/a.jpeg"]) assert.ok(importAllowed(ok), ok);
+  for (const bad of ["http://media.licdn.com/a.jpg", "https://licdn.com/a.jpg", "https://media.licdn.com.evil.com/a.jpg", "https://evil.com/media.licdn.com/a.jpg",
+    "https://media.licdn.com@evil.com/a.jpg", "https://user:pw@media.licdn.com/a.jpg", "https://media.licdn.com:8443/a.jpg", "https://localhost/a.png",
+    "https://169.254.169.254/latest/meta-data", "ftp://media.licdn.com/a", "javascript:alert(1)", "not a url", "https://notsubstackcdn.com/a.png"]) {
+    assert.equal(importAllowed(bad), null, bad);
+  }
+});
+test("image import: stores real images, refuses redirects, non-images, HTML pretending to be an image and oversize", async () => {
+  const env = makeEnv();
+  const png = (over = {}) => async () => new Response(PNG, { status: 200, headers: { "content-type": "image/png" }, ...over });
+  const ok = await importImage(env, "https://media.licdn.com/dms/image/x.png", png());
+  assert.equal(ok.status, 201); assert.match(ok.body.url, /^\/media\/\d{4}\/\d{2}\/[0-9a-f-]{36}\.png$/); assert.ok(env.MEDIA.m.has(ok.body.key));
+  assert.equal((await importImage(env, "https://evil.com/a.png", png())).status, 400);
+  assert.equal((await importImage(env, "https://media.licdn.com/a.png", async () => new Response(null, { status: 302, headers: { location: "http://169.254.169.254/" } }))).status, 502);
+  assert.equal((await importImage(env, "https://media.licdn.com/a.png", async () => new Response("<html>login</html>", { status: 200 }))).status, 415);
+  assert.equal((await importImage(env, "https://media.licdn.com/a.png", async () => new Response(new Uint8Array(5 * 1024 * 1024 + 10).fill(1), { status: 200 }))).status, 413);
+  assert.equal((await importImage(env, "https://media.licdn.com/a.png", async () => { throw new Error("network"); })).status, 502);
+  const calls = []; await importImage(env, "https://media.licdn.com/a.png", async (u, init) => { calls.push(init.redirect); return new Response(PNG); });
+  assert.deepEqual(calls, ["manual"]);                                                       // redirects are never followed
+});
+test("the import endpoint needs a session and rejects bad hosts", async () => {
+  const env = makeEnv();
+  assert.equal((await call(env, "/api/admin/media/import", { method: "POST", body: { url: "https://media.licdn.com/a.png" } })).status, 401);
+  const cookie = await signedIn(env);
+  assert.equal((await call(env, "/api/admin/media/import", { method: "POST", cookie, body: { url: "https://evil.com/a.png" } })).status, 400);
+  assert.equal((await call(env, "/api/admin/media/import", { method: "POST", cookie, body: {} })).status, 400);
 });

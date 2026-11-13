@@ -43,3 +43,9 @@ button.link { background:none; color:var(--muted); font-weight:400; padding:.2re
 .prose blockquote { margin:1rem 0; padding:.1rem 1rem; border-left:3px solid var(--accent); color:var(--muted); }
 .prose pre { overflow-x:auto; padding:.9rem; background:#f3f1ec; border-radius:8px; }
 .prose a { color:var(--accent); }
+
+.sites { border:0; padding:0; margin:1rem 0 0; display:flex; gap:1.2rem; flex-wrap:wrap; }
+.sites legend { font-weight:600; padding:0; margin-bottom:.35rem; }
+.sites label { display:flex; align-items:center; gap:.4rem; font-weight:500; margin:0; }
+.sites input { width:auto; }
+.rows .s { color:var(--muted); font-size:.85rem; }

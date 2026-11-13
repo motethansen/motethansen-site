@@ -1,4 +1,6 @@
 // Article list and Markdown editor.
+import { htmlToMarkdown, importableImages } from "./html2md.js";
+
 const $ = id => document.getElementById(id);
 
 const slugify = t => t.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/&/g, " and ")
@@ -15,8 +17,28 @@ export function initEditor({ api, show }) {
   let slugTouched = false;
   let filter = "";
   let previewTimer = null;
+  let siteNames = [];          // enabled sites from the server
+  let currentSite = null;      // the site this admin page is open on (default for new articles)
 
   const say = (id, text, ok = false) => { const e = $(id); e.textContent = text; e.className = "msg" + (ok ? " ok" : ""); };
+
+  // ---------- sites ----------
+  async function loadConfig() {
+    const r = await api("/api/admin/config");
+    if (!r.ok) return;
+    siteNames = r.data.sites; currentSite = r.data.current;
+    const box = $("sites");
+    box.querySelectorAll("label").forEach(l => l.remove());
+    for (const name of siteNames) {
+      const label = document.createElement("label");
+      const cb = Object.assign(document.createElement("input"), { type: "checkbox", value: name });
+      cb.addEventListener("change", () => setDirty(true));
+      label.append(cb, document.createTextNode(name === "vizneo" ? "vizneo.com" : "motethansen.com"));
+      box.append(label);
+    }
+  }
+  const setSites = list => document.querySelectorAll("#sites input").forEach(cb => { cb.checked = list.includes(cb.value); });
+  const getSites = () => [...document.querySelectorAll("#sites input:checked")].map(cb => cb.value);
 
   // ---------- list ----------
   async function refreshList() {
@@ -35,8 +57,9 @@ export function initEditor({ api, show }) {
       const li = document.createElement("li");
       const t = Object.assign(document.createElement("span"), { className: "t", textContent: a.title });
       const chip = Object.assign(document.createElement("span"), { className: "chip " + a.status, textContent: a.status });
+      const sites = Object.assign(document.createElement("span"), { className: "s", textContent: a.sites.join(", ") });
       const d = Object.assign(document.createElement("span"), { className: "d", textContent: fmtDate(a.published_at || a.created_at) });
-      li.append(t, chip, d);
+      li.append(t, sites, chip, d);
       li.addEventListener("click", () => openArticle(a.id));
       ul.append(li);
     }
@@ -60,6 +83,7 @@ export function initEditor({ api, show }) {
     $("f-cover").value = v.cover || "";
     $("f-body").value = v.body_md || "";
     $("f-origin").value = v.origin_url || "";
+    setSites(v.sites || (currentSite ? [currentSite] : []));
     slugTouched = !!current;
     setDirty(false);
     syncChrome();
@@ -93,7 +117,7 @@ export function initEditor({ api, show }) {
     return {
       title: $("f-title").value, slug: $("f-slug").value.trim(), description: $("f-desc").value,
       tags: $("f-tags").value.split(","), cover: $("f-cover").value.trim(), body_md: $("f-body").value,
-      published_at: fromLocalInput($("f-date").value), origin_url: $("f-origin").value.trim(),
+      published_at: fromLocalInput($("f-date").value), origin_url: $("f-origin").value.trim(), sites: getSites(),
     };
   }
 
@@ -224,13 +248,49 @@ export function initEditor({ api, show }) {
   });
   $("cover-up").addEventListener("click", () => { pendingInsert = false; $("file").click(); });
   $("cover-clear").addEventListener("click", () => { $("f-cover").value = ""; $("f-cover").dispatchEvent(new Event("input")); });
+  // Ctrl/Cmd+Shift+V pastes plain text as-is; a normal paste of a web page becomes Markdown.
+  let plainPaste = false;
+  ta.addEventListener("keydown", e => { plainPaste = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "v"; });
+
+  function insertAtCaret(text) {
+    const s = ta.selectionStart;
+    ta.setRangeText(text, s, ta.selectionEnd, "end");
+    ta.focus(); ta.dispatchEvent(new Event("input"));
+    return [s, s + text.length];
+  }
+
+  async function importImages(urls) {
+    let failed = 0;
+    for (let i = 0; i < urls.length; i++) {
+      say("ed-msg", `Copying image ${i + 1} of ${urls.length} into your own storage…`, true);
+      const r = await api("/api/admin/media/import", { method: "POST", body: { url: urls[i] } });
+      if (r.ok) ta.value = ta.value.split(urls[i]).join(r.data.url);
+      else failed++;
+    }
+    ta.dispatchEvent(new Event("input"));
+    say("ed-msg", failed
+      ? `${urls.length - failed} image(s) copied; ${failed} could not be and still point at the original site.`
+      : `Pasted. ${urls.length} image(s) copied into your own storage.`, !failed);
+  }
+
   ta.addEventListener("paste", async e => {
     const file = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith("image/"));
-    if (!file) return;
+    if (file) {
+      e.preventDefault();
+      const url = await upload(file);
+      if (url) wrap("![", `](${url})`, "image");
+      return;
+    }
+    const html = e.clipboardData?.getData("text/html");
+    if (!html || plainPaste) return;                       // plain text: let the browser paste it
     e.preventDefault();
-    const url = await upload(file);
-    if (url) wrap("![", `](${url})`, "image");
+    const md = htmlToMarkdown(html);
+    insertAtCaret(md);
+    const urls = importableImages(md);
+    if (urls.length) await importImages(urls);
+    else say("ed-msg", "Pasted as Markdown. Check the preview.", true);
   });
 
+  loadConfig();
   return { refreshList };
 }

@@ -17,3 +17,9 @@ bucket_name = "motethansen-media"
 [[kv_namespaces]]
 binding = "SITE_KV"
 id = "1b97cac1e10d4bcaaa1bef301a86af26"
+
+# The editor page (admin-ui/admin/*) is served by this Worker so motethansen.com and vizneo.com share one copy.
+[assets]
+directory = "./admin-ui"
+binding = "ASSETS"
+run_worker_first = true

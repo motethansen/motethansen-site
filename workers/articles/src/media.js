@@ -29,6 +29,40 @@ export async function uploadImage(env, request, now = new Date()) {
   return { status: 201, body: { key, url: "/" + key } };
 }
 
+/**
+ * Import an image that a pasted article points at (LinkedIn / Substack CDNs) into our own storage, so the article
+ * keeps its pictures if the original is deleted. SSRF-safe: https only, no credentials in the URL, exact host
+ * allowlist, no redirects, size cap, and the bytes must really be a supported image.
+ */
+export const IMPORT_HOSTS = [/^media(?:-exp\d+)?\.licdn\.com$/, /^substackcdn\.com$/, /^substack-post-media\.s3\.amazonaws\.com$/, /^bucketeer-[a-z0-9-]+\.s3\.amazonaws\.com$/];
+
+export function importAllowed(raw) {
+  let u;
+  try { u = new URL(raw); } catch { return null; }
+  if (u.protocol !== "https:" || u.username || u.password || u.port) return null;
+  return IMPORT_HOSTS.some(re => re.test(u.hostname)) ? u : null;
+}
+
+export async function importImage(env, rawUrl, fetcher = fetch, now = new Date()) {
+  const u = importAllowed(rawUrl);
+  if (!u) return { status: 400, body: { error: "Images can only be imported from LinkedIn or Substack addresses." } };
+  let res;
+  try {
+    res = await fetcher(u.toString(), { redirect: "manual", headers: { "User-Agent": "Mozilla/5.0 (compatible; article-import)", Accept: "image/*" } });
+  } catch {
+    return { status: 502, body: { error: "Could not download that image." } };
+  }
+  if (!res.ok) return { status: 502, body: { error: `The image host answered ${res.status}.` } };
+  if (Number(res.headers.get("content-length") || 0) > MAX_IMAGE_BYTES) return { status: 413, body: { error: "Images are limited to 5 MB." } };
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.length > MAX_IMAGE_BYTES) return { status: 413, body: { error: "Images are limited to 5 MB." } };
+  const type = sniff(bytes);
+  if (!type) return { status: 415, body: { error: "That address is not a PNG, JPEG, WebP or GIF image." } };
+  const key = `media/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}.${TYPES[type]}`;
+  await env.MEDIA.put(key, bytes, { httpMetadata: { contentType: type } });
+  return { status: 201, body: { key, url: "/" + key } };
+}
+
 export async function serveImage(env, pathname, method = "GET") {
   if (!MEDIA_PATH.test(pathname)) return new Response("Not found", { status: 404 });
   const obj = await env.MEDIA.get(pathname.slice(1));
