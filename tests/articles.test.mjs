@@ -316,3 +316,81 @@ test("the import endpoint needs a session and rejects bad hosts", async () => {
   assert.equal((await call(env, "/api/admin/media/import", { method: "POST", cookie, body: { url: "https://evil.com/a.png" } })).status, 400);
   assert.equal((await call(env, "/api/admin/media/import", { method: "POST", cookie, body: {} })).status, 400);
 });
+
+// ---------- linked-out entries pushed by the mac-mini (Substack) ----------
+const TOKEN = "ingest-token-for-tests-0123456789";
+const push = (env, body, { token = TOKEN, method = "POST" } = {}) =>
+  route(new Request(ORIGIN + "/api/ingest/external", {
+    method, headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: method === "GET" ? undefined : JSON.stringify(body),
+  }), { ...env, INGEST_TOKEN: TOKEN });
+const va = (over = {}) => ({ url: "https://vizneoacademy.substack.com/p/from-one-prompt", title: "From one prompt to a Scrum team", date: "2026-11-12T04:36:19Z",
+  description: "Building distributed-infra", image: "https://substackcdn.com/image/fetch/x.png", ...over });
+
+test("ingest: needs the bearer token; an unset token admits nobody", async () => {
+  const env = makeEnv();
+  assert.equal((await push(env, { source: "va-substack", entries: [va()] }, { token: null })).status, 401);
+  assert.equal((await push(env, { source: "va-substack", entries: [va()] }, { token: "wrong" })).status, 401);
+  const noSecret = await route(new Request(ORIGIN + "/api/ingest/external", { method: "POST", headers: { authorization: "Bearer " } , body: "{}" }), makeEnv());
+  assert.equal(noSecret.status, 401);
+  assert.equal((await push(env, {}, { method: "GET" })).status, 405);
+  assert.equal(env.DB.raw.prepare("SELECT COUNT(*) c FROM articles").get().c, 0);
+});
+test("ingest: inserts, then updates by address without duplicating, and records the sync time", async () => {
+  const env = makeEnv();
+  const first = await (await push(env, { source: "va-substack", entries: [va()] })).json();
+  assert.deepEqual([first.inserted, first.updated], [1, 0]);
+  const again = await (await push(env, { source: "va-substack", entries: [va({ title: "From one prompt to a Scrum team (edited)" })] })).json();
+  assert.deepEqual([again.inserted, again.updated], [0, 1]);
+  const rows = env.DB.raw.prepare("SELECT title, source, platform, external_url, status, sites FROM articles").all();
+  assert.equal(rows.length, 1); assert.equal(rows[0].title, "From one prompt to a Scrum team (edited)");
+  assert.deepEqual([rows[0].source, rows[0].platform, rows[0].status], ["Vizneo Academy", "Substack", "published"]);
+  const sync = await env.SITE_KV.get("external-sync-v1:va-substack", "json");
+  assert.ok(sync.ts > 1_700_000_000); assert.equal(sync.seen, 1);
+});
+test("ingest: validates the source, the host for that source, titles and dates; bad entries are skipped, good ones kept", async () => {
+  const env = makeEnv();
+  assert.equal((await push(env, { source: "nope", entries: [va()] })).status, 400);
+  assert.equal((await push(env, { source: "va-substack", entries: [] })).status, 400);
+  assert.equal((await push(env, { source: "va-substack", entries: Array(201).fill(va()) })).status, 400);
+  const r = await (await push(env, { source: "ulw-substack", entries: [
+    va({ url: "https://urbanlifeworks.substack.com/p/ok", title: "Good" }),
+    va({ url: "https://vizneoacademy.substack.com/p/wrong-publication" }),        // another publication's host
+    va({ url: "http://urbanlifeworks.substack.com/p/plain-http" }),
+    va({ url: "https://evil.com/p/x" }), va({ url: "https://urbanlifeworks.substack.com@evil.com/p/x" }),
+    va({ url: "https://urbanlifeworks.substack.com/p/no-title", title: "" }),
+  ] })).json();
+  assert.equal(r.inserted, 1); assert.equal(r.skipped.length, 5);
+  const odd = await (await push(env, { source: "ulw-substack", entries: [va({ url: "https://urbanlifeworks.substack.com/p/odd", date: "not a date", image: "http://x/y.png" })] })).json();
+  assert.equal(odd.inserted, 1);
+  const row = env.DB.raw.prepare("SELECT published_at, cover FROM articles WHERE external_url LIKE '%/odd'").get();
+  assert.equal(row.published_at, null); assert.equal(row.cover, null);               // bad date and non-https image are dropped, not stored
+});
+test("linked-out entries: listed on the sites their source is configured for, link out, never get a page or an RSS item", async () => {
+  const env = makeEnv(); const cookie = await signedIn(env);
+  await push(env, { source: "va-substack", entries: [va()] });
+  await push(env, { source: "ulw-substack", entries: [va({ url: "https://urbanlifeworks.substack.com/p/ulw-one", title: "ULW piece" })] });
+
+  const moth = (await (await call(env, "/writing/index.json")).json()).articles;
+  assert.deepEqual(moth.map(a => a.title).sort(), ["From one prompt to a Scrum team", "ULW piece"]);
+  const e = moth.find(a => a.title === "ULW piece");
+  assert.equal(e.url, "https://urbanlifeworks.substack.com/p/ulw-one"); assert.equal(e.platform, "Substack"); assert.equal(e.source, "Urban Life Works");
+
+  const viz = (await (await vcall(env, "/writing/index.json")).json()).articles;
+  assert.deepEqual(viz.map(a => a.title), ["From one prompt to a Scrum team"]);       // Vizneo Academy only, not Urban Life Works
+  const vizList = await (await vcall(env, "/writing/")).text();
+  assert.match(vizList, /href="https:\/\/vizneoacademy\.substack\.com\/p\/from-one-prompt" target="_blank"/); assert.match(vizList, /Substack, Vizneo Academy/);
+
+  const slug = env.DB.raw.prepare("SELECT slug FROM articles WHERE title = 'ULW piece'").get().slug;
+  assert.equal((await call(env, `/writing/${slug}/`)).status, 404);                   // no page of our own
+  assert.doesNotMatch(await (await call(env, "/writing/rss.xml")).text(), /ULW piece/);
+  assert.equal((await (await call(env, "/api/admin/articles", { cookie })).json()).articles.length, 0);   // editor list shows only what is written here
+});
+test("a hidden linked-out entry stays hidden through the next sync", async () => {
+  const env = makeEnv();
+  await push(env, { source: "va-substack", entries: [va()] });
+  env.DB.raw.exec("UPDATE articles SET status = 'draft'");
+  await push(env, { source: "va-substack", entries: [va({ title: "Renamed upstream" })] });
+  const row = env.DB.raw.prepare("SELECT status, title FROM articles").get();
+  assert.deepEqual([row.status, row.title], ["draft", "Renamed upstream"]);
+  assert.equal((await (await call(env, "/writing/index.json")).json()).articles.length, 0);
+});

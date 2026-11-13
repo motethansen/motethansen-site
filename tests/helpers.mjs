@@ -1,10 +1,11 @@
 /** Test doubles: a D1-compatible wrapper over node:sqlite, an in-memory R2 and KV. */
 import { DatabaseSync } from "node:sqlite";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 export function makeD1() {
   const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(readFileSync(new URL("../workers/articles/schema.sql", import.meta.url), "utf8"));
+  const dir = new URL("../workers/articles/migrations/", import.meta.url);
+  for (const f of readdirSync(dir).sort()) sqlite.exec(readFileSync(new URL(f, dir), "utf8"));
   const wrap = sql => {
     let args = [];
     const st = sqlite.prepare(sql);

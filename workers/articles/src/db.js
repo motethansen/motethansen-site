@@ -1,20 +1,22 @@
 /** D1 queries for articles. `db` is a D1 database (or the node:sqlite adapter used in tests). */
 
-const COLS_LIST = "id, slug, title, description, cover, tags, sites, status, published_at, created_at, updated_at, origin_url";
+const COLS_LIST = "id, slug, title, description, cover, tags, sites, status, published_at, created_at, updated_at, origin_url, external_url, source, platform";
 const COLS_FULL = COLS_LIST + ", body_md";
 
 const parse = r => r && { ...r, tags: JSON.parse(r.tags || "[]"), sites: JSON.parse(r.sites || "[]") };
 
-export async function listArticles(db, { status = null, site = null, q = null, limit = 100 } = {}) {
+// external: false = only articles written here, true = only linked-out ones (Substack, LinkedIn), null = both
+export async function listArticles(db, { status = null, site = null, q = null, limit = 100, external = null } = {}) {
   const like = q ? `%${String(q).replace(/[%_]/g, m => "\\" + m)}%` : null;
   const { results } = await db.prepare(
     `SELECT ${COLS_LIST} FROM articles
       WHERE (? IS NULL OR status = ?)
         AND (? IS NULL OR EXISTS (SELECT 1 FROM json_each(articles.sites) WHERE value = ?))
         AND (? IS NULL OR title LIKE ? ESCAPE '\\')
+        AND (? IS NULL OR (? = 1) = (external_url IS NOT NULL))
       ORDER BY COALESCE(published_at, created_at) DESC, created_at DESC
       LIMIT ?`,
-  ).bind(status, status, site, site, like, like, Math.min(limit, 500)).all();
+  ).bind(status, status, site, site, like, like, external === null ? null : +external, external === null ? null : +external, Math.min(limit, 500)).all();
   return results.map(parse);
 }
 
@@ -25,7 +27,7 @@ export async function getById(db, id) {
 export async function getPublishedBySlug(db, slug, site) {
   return parse(await db.prepare(
     `SELECT ${COLS_FULL} FROM articles
-      WHERE slug = ? AND status = 'published'
+      WHERE slug = ? AND status = 'published' AND external_url IS NULL
         AND EXISTS (SELECT 1 FROM json_each(articles.sites) WHERE value = ?)`,
   ).bind(slug, site).first());
 }
@@ -64,3 +66,29 @@ export async function deleteArticle(db, id) {
 }
 
 export const isUniqueViolation = e => /UNIQUE constraint failed/i.test(String(e?.message || e));
+
+
+/** A stable, valid slug for a linked-out entry: derived from its address, so re-importing never creates a second row. */
+export async function externalSlug(url) {
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(url)));
+  return "ext-" + [...h.slice(0, 6)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Insert or refresh one linked-out entry (matched by its address). Refreshes only the facts about the post;
+ * `status` is never touched, so hiding an entry in the editor survives the next sync.
+ * @returns {"inserted"|"updated"}
+ */
+export async function upsertExternal(db, src, e, now = Math.floor(Date.now() / 1000)) {
+  const existing = await db.prepare("SELECT id FROM articles WHERE external_url = ?").bind(e.url).first();
+  await db.prepare(
+    `INSERT INTO articles (id, slug, title, description, body_md, cover, tags, sites, status, published_at, created_at, updated_at,
+                           origin_url, external_url, source, platform)
+     VALUES (?, ?, ?, ?, '', ?, '[]', ?, 'published', ?, ?, ?, NULL, ?, ?, ?)
+     ON CONFLICT (external_url) WHERE external_url IS NOT NULL DO UPDATE SET
+       title = excluded.title, description = excluded.description, cover = excluded.cover,
+       published_at = COALESCE(excluded.published_at, articles.published_at), updated_at = excluded.updated_at`,
+  ).bind(crypto.randomUUID(), await externalSlug(e.url), e.title, e.description, e.image, JSON.stringify(src.sites),
+    e.published_at, now, now, e.url, src.source, src.platform).run();
+  return existing ? "updated" : "inserted";
+}

@@ -18,7 +18,7 @@ export CLOUDFLARE_ACCOUNT_ID=f999794776f99de37612b4abbfbfc21a
 echo "▶ Deploying the articles service (D1 schema + Worker)..."
 cd "$REPO/workers/articles"
 npm ci --silent
-wrangler d1 execute motethansen-articles --remote --file=schema.sql >/dev/null
+wrangler d1 migrations apply motethansen-articles --remote
 wrangler deploy
 cd "$REPO"
 

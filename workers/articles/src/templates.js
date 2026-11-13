@@ -5,7 +5,7 @@ export const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;"
 const iso = s => new Date(s * 1000).toISOString();
 const dateLong = s => new Date(s * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
-export const articleUrl = (site, a) => `${SITES[site].origin}/writing/${a.slug}/`;
+export const articleUrl = (site, a) => a.external_url || `${SITES[site].origin}/writing/${a.slug}/`;
 const absolute = (site, p) => (p && p.startsWith("/") ? SITES[site].origin + p : p || "");
 
 import { LAYOUTS } from "./layouts.js";
@@ -67,8 +67,8 @@ export function articlePage(site, a, bodyHtml) {
 export function listPage(site, articles) {
   const url = `${SITES[site].origin}/writing/`;
   const items = articles.map(a => `<li>
-      <a class="t" href="${esc(articleUrl(site, a))}">${esc(a.title)}</a>
-      <div class="d">${dateLong(a.published_at || a.created_at)}</div>
+      <a class="t" href="${esc(articleUrl(site, a))}"${a.external_url ? ' target="_blank" rel="noopener"' : ""}>${esc(a.title)}</a>
+      <div class="d">${dateLong(a.published_at || a.created_at)}${a.external_url ? ` · ${esc(a.platform)}, ${esc(a.source)}` : ""}</div>
       ${a.description ? `<p>${esc(a.description)}</p>` : ""}
     </li>`).join("");
   const body = `<p class="eyebrow">Writing</p><h1>Articles.</h1>
@@ -81,7 +81,8 @@ export function feedEntry(site, a) {
   return {
     title: a.title, url: articleUrl(site, a), date: iso(a.published_at || a.created_at),
     image: absolute(site, a.cover) || null, description: a.description,
-    source: SITES[site].name, platform: SITES[site].host, sourceLink: `${SITES[site].origin}/writing/`, sourceId: "native",
+    source: a.source || SITES[site].name, platform: a.platform || SITES[site].host,
+    sourceLink: a.external_url ? "" : `${SITES[site].origin}/writing/`, sourceId: a.external_url ? "external" : "native",
     slug: a.slug, tags: a.tags,
   };
 }
