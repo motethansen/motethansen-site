@@ -71,6 +71,21 @@ export function initEditor({ api, show }) {
     refreshList();
   }));
 
+  // ---------- add a Substack post by address ----------
+  $("ext").addEventListener("submit", async e => {
+    e.preventDefault();
+    const btn = $("ext").querySelector("button"); btn.disabled = true;
+    say("ext-msg", "");
+    try {
+      const r = await api("/api/admin/external", { method: "POST", body: { url: $("ext-url").value } });
+      if (!r.ok) { say("ext-msg", r.data.error || "Could not add that post."); return; }
+      const d = r.data;
+      say("ext-msg", d.state === "queued" ? `Added “${d.title}”. ${d.note}`
+        : d.state === "exists" ? `Already listed: “${d.title}”.` : `${d.state === "added" ? "Added" : "Updated"} “${d.title}” (${d.source}). It is on the site now.`, true);
+      $("ext-url").value = "";
+    } finally { btn.disabled = false; }
+  });
+
   // ---------- editor state ----------
   function fill(a) {
     current = a && a.id ? a : null;

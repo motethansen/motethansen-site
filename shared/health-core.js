@@ -8,7 +8,7 @@
 
 export const SYNC_SOURCES = ["va-substack", "ulw-substack"];
 export const SYNC_PREFIX = "external-sync-v1:";
-export const SYNC_MAX_AGE_S = 3 * 3600;          // hourly job + two missed runs
+export const SYNC_MAX_AGE_S = 3600;              // runs every 10 minutes: an hour of silence is six missed runs
 
 /** "18 min" under 90 minutes, "3.5 h" above. */
 const ago = s => (s < 5400 ? `${Math.max(1, Math.round(s / 60))} min` : `${Math.round(s / 360) / 10} h`);
@@ -30,7 +30,7 @@ export function computeHealth(syncs, serviceUp, nowS) {
     if (!rec) { checks[`sync_${id}`] = false; degrade(`${id} has never been pulled (thinkpad substack-sync.timer)`); continue; }
     const age = nowS - rec.ts;
     checks[`sync_${id}`] = age <= SYNC_MAX_AGE_S;
-    if (age > SYNC_MAX_AGE_S) degrade(`${id} last pulled ${ago(age)} ago (hourly job on the thinkpad)`);
+    if (age > SYNC_MAX_AGE_S) degrade(`${id} last pulled ${ago(age)} ago (runs every 10 min on the thinkpad)`);
   }
   return { component: "motethansen-site", status, ts: nowS, checks, errors };
 }

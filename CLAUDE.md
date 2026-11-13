@@ -21,7 +21,7 @@ functions/              Pages Functions
   api/contact.js        contact form -> Resend; api/publications.js legacy stub; img.js first-party image proxy
 shared/                 admin-core.js (sessions, credentials, throttle), admin-http.js (cookies, origin check), health-core.js
 workers/articles/       THE SERVICE (see below): src/, admin-ui/ (editor page), migrations/, wrangler.toml
-scripts/substack_sync.py  hourly Substack pull (runs on the thinkpad)
+scripts/substack_sync.py  Substack pull, every 10 minutes (runs on the thinkpad)
 tests/                  node --test (needs `npm install` in workers/articles/ for markdown-it); scripts/test_substack_sync.py (pytest)
 wrangler.toml           Pages config: KV SITE_KV, service binding ARTICLES
 deploy.sh               manual deploy: articles service (+ D1 migrations) -> Pages -> verify
@@ -46,10 +46,15 @@ vizneowebsite Worker. It tells sites apart by the request's host (`siteOf`), so 
 
 ## Substack
 Substack answers Cloudflare's IPs with HTTP 429 (sometimes for a day), so **the site never fetches it**. `scripts/substack_sync.py`
-runs hourly on the **thinkpad** (`~/.config/systemd/user/substack-sync.timer`, copy at `~/.local/bin/`, token in
+runs every **10 minutes** on the **thinkpad** (`~/.config/systemd/user/substack-sync.timer`, copy at `~/.local/bin/`, token in
 `~/.config/motethansen/ingest-token`) and pushes both feeds to `POST /api/ingest/external` (bearer `INGEST_TOKEN`, a Worker secret).
 Upserts by address, never deletes. The **mac-mini cannot be used**: it cannot reach motethansen.com/vizneo.com (dual en0/en1 route on
-192.168.0.0/24, see the netwatch notes). `/api/health` is degraded if either source has not synced for 3 h; Vantage entity `motethansen-content`.
+192.168.0.0/24, see the netwatch notes). `/api/health` is degraded if either source has not synced for 1 h; Vantage entity `motethansen-content`.
+
+**Add by address** (editor home, "Add a Substack post by address"): `POST /api/admin/external` takes a post address on one of the two
+publications, tries once to read its og: tags from Cloudflare (works when Substack is not blocking), and otherwise lists it at once as a
+*provisional* row titled from the address (`provisional=1`, migration 0003). The next pull confirms it with the real details (same address = same row)
+or, if a pull never sees it for 30 minutes (a typo), removes it. A 404 from Substack is refused outright. Substack has no CORS, so a browser cannot do this lookup itself.
 
 ## Deploy
 ```bash
