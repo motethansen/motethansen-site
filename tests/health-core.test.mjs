@@ -1,43 +1,32 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { computeHealth, withStaleSince } from "../shared/health-core.js";
+import { computeHealth, SYNC_MAX_AGE_S } from "../shared/health-core.js";
 
 const NOW = 1_800_000_000;
-const okFeed = (over = {}) => ({ ts: NOW - 600, complete: true, degraded: false,
-  sources: [{ id: "ulw", status: "live", staleSince: null }, { id: "va", status: "live", staleSince: null }], ...over });
+const fresh = { "va-substack": { ts: NOW - 600, seen: 18 }, "ulw-substack": { ts: NOW - 1200, seen: 16 } };
 
-test("everything fresh and live is up", () => {
-  const h = computeHealth(okFeed(), NOW);
+test("both sources pulled recently and the service up is up", () => {
+  const h = computeHealth(fresh, true, NOW);
   assert.equal(h.status, "up"); assert.deepEqual(h.errors, []); assert.equal(h.component, "motethansen-site");
+  assert.deepEqual(Object.keys(h.checks).sort(), ["articles_service", "sync_ulw-substack", "sync_va-substack"]);
 });
-test("one 429 (snapshot for a run) is noise, not degraded", () => {
-  const feed = okFeed({ sources: [{ id: "va", status: "snapshot", error: "HTTP 429", staleSince: NOW - 600 }] });
-  assert.equal(computeHealth(feed, NOW).status, "up");
+test("a source not pulled for over 3 h is degraded and names it and the job to look at", () => {
+  const h = computeHealth({ ...fresh, "va-substack": { ts: NOW - SYNC_MAX_AGE_S - 60, seen: 18 } }, true, NOW);
+  assert.equal(h.status, "degraded"); assert.equal(h.checks["sync_va-substack"], false);
+  assert.match(h.errors[0], /va-substack last pulled 3 h ago .*thinkpad/);
 });
-test("a source on its snapshot for 4 h is degraded and names the source", () => {
-  const feed = okFeed({ sources: [{ id: "va", status: "snapshot", error: "HTTP 429", staleSince: NOW - 4 * 3600 }] });
-  const h = computeHealth(feed, NOW);
-  assert.equal(h.status, "degraded"); assert.match(h.errors[0], /va served from its snapshot for 4 h/);
+test("exactly at the limit is still fine; one missed hourly run is fine", () => {
+  assert.equal(computeHealth({ ...fresh, "va-substack": { ts: NOW - SYNC_MAX_AGE_S, seen: 1 } }, true, NOW).status, "up");
+  assert.equal(computeHealth({ ...fresh, "va-substack": { ts: NOW - 5400, seen: 1 } }, true, NOW).status, "up");
 });
-test("a refresh that stopped running is degraded even if its last result was clean", () => {
-  const h = computeHealth(okFeed({ ts: NOW - 5 * 3600 }), NOW);
-  assert.equal(h.status, "degraded"); assert.equal(h.checks.feed_refresh, false); assert.match(h.errors[0], /last ran 5 h ago/);
+test("a source never pulled is degraded", () => {
+  const h = computeHealth({ ...fresh, "ulw-substack": null }, true, NOW);
+  assert.equal(h.status, "degraded"); assert.match(h.errors[0], /ulw-substack has never been pulled/);
 });
-test("a missing record is degraded, not up", () => {
-  const h = computeHealth(null, NOW);
-  assert.equal(h.status, "degraded"); assert.equal(h.errors.length, 1);
+test("the articles service being down is degraded even when the pulls are fresh", () => {
+  const h = computeHealth(fresh, false, NOW);
+  assert.equal(h.status, "degraded"); assert.equal(h.checks.articles_service, false);
 });
-test("an incomplete feed is degraded", () => {
-  assert.equal(computeHealth(okFeed({ complete: false }), NOW).status, "degraded");
-});
-test("short durations read in minutes", () => {
-  assert.match(computeHealth(okFeed({ ts: NOW - 4 * 3600 }), NOW).errors[0], /4 h ago/);
-  const feed = okFeed({ sources: [{ id: "va", status: "snapshot", error: "x", staleSince: NOW - 4 * 3600 }] });
-  assert.match(computeHealth(feed, NOW).errors[0], /4 h/);
-});
-test("staleSince is carried across runs and cleared on recovery", () => {
-  const prev = { sources: [{ id: "va", status: "snapshot", staleSince: NOW - 7200 }] };
-  assert.equal(withStaleSince([{ id: "va", status: "snapshot", count: 1 }], prev, NOW)[0].staleSince, NOW - 7200);
-  assert.equal(withStaleSince([{ id: "va", status: "live", count: 1 }], prev, NOW)[0].staleSince, null);
-  assert.equal(withStaleSince([{ id: "va", status: "snapshot", count: 1 }], null, NOW)[0].staleSince, NOW);
+test("short durations are shown in minutes", () => {
+  assert.match(computeHealth({ ...fresh, "va-substack": { ts: NOW - 4 * 3600, seen: 1 } }, true, NOW).errors[0], /4 h ago/);
 });

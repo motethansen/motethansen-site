@@ -3,15 +3,18 @@
  *
  *   { "component": "motethansen-site", "status": "up|degraded", "ts": <epoch s>, "checks": { ... }, "errors": [ ... ] }
  *
- * Reads the status record the hourly feed-refresh Worker leaves in KV; makes NO upstream request, so polling it
- * costs nothing and cannot worsen Substack's rate limiting. See shared/health-core.js for the rules.
+ * Reads the last-sync records the Substack pull leaves in KV and pings the articles service; makes no request to
+ * Substack or any third party. See shared/health-core.js for the rules.
  */
-import { kvGetJson } from "../../shared/feed-core.js";
-import { computeHealth, FEED_STATUS_KEY } from "../../shared/health-core.js";
+import { computeHealth, SYNC_SOURCES, SYNC_PREFIX } from "../../shared/health-core.js";
 
 export async function onRequestGet({ env }) {
-  const feed = await kvGetJson(env, FEED_STATUS_KEY);
-  return new Response(JSON.stringify(computeHealth(feed, Math.floor(Date.now() / 1000))), {
+  const syncs = Object.fromEntries(await Promise.all(
+    SYNC_SOURCES.map(async (id) => [id, await env.SITE_KV.get(SYNC_PREFIX + id, "json")]),
+  ));
+  let serviceUp = false;
+  try { serviceUp = (await env.ARTICLES.fetch("https://motethansen.com/writing/index.json")).ok; } catch { /* reported as down */ }
+  return new Response(JSON.stringify(computeHealth(syncs, serviceUp, Math.floor(Date.now() / 1000))), {
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 }

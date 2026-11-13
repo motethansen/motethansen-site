@@ -1,135 +1,55 @@
 /**
- * GET /api/writing
- * Aggregates live Substack RSS feeds plus LinkedIn articles.
+ * GET /api/writing — the site's article list: everything in the article store that is published for this site
+ * (articles written in /admin, plus the linked-out Substack and legacy LinkedIn entries).
  *
- * All fetch/parse/merge/cache logic lives in shared/feed-core.js, which the
- * scheduled Worker (workers/feed-refresh/) imports too — see that file for the
- * per-source fallback model that keeps a single blocked publication from
- * silently vanishing from the feed.
+ *   ?all=1   the full list (the /writing archive page); default is the newest 9 (the home page)
  *
- * LinkedIn source:
- *   - Primary: KV key `linkedin-posts-v1` (a JSON array), maintained by the
- *     external DigitalOcean sync job in linkedin-sync/. Lets new LinkedIn
- *     articles appear with no redeploy.
- *   - Fallback: the in-repo seed array in content/linkedin-posts.js.
- *
- * Response: { posts, total, cached }
- *   - default: top 9 posts (homepage grid)
- *   - ?all=1 : the full merged list (the /writing/ articles page)
- *
- * Diagnostics: ?debug=1 forces a live rebuild (bypassing the merged cache) and
- * returns per-source status instead of posts. It never writes the merged cache,
- * so it is safe to hit while investigating a missing publication.
+ * The store is filled by /admin and by the hourly Substack pull (scripts/substack_sync.py on the thinkpad), so this
+ * function makes no request to Substack or LinkedIn. Response: { posts, total }.
  */
-
-import { buildFeed, cacheFeed, kvGetJson, CACHE_KEY } from "../../shared/feed-core.js";
-
 const HOME_LIMIT = 9;
 
 export async function onRequestGet({ request, env }) {
-  const params = new URL(request.url).searchParams;
-  const wantAll = params.get("all") === "1";
-
-  if (params.get("debug") === "1") return debugResponse(env);
-
-  // 1. Serve the cached full list if present.
-  if (env.SITE_KV) {
-    const cached = await kvGetJson(env, CACHE_KEY);
-    if (Array.isArray(cached)) return feedResponse(await withNative(env, cached), wantAll, true);
-  }
-
-  // 2. Rebuild from live sources (each with its own last-known-good fallback).
-  const build = await buildFeed(env);
-
-  // 3. Persist only a complete build — never cache a feed missing a publication.
-  await cacheFeed(env, build);
-
-  return feedResponse(await withNative(env, build.posts), wantAll, false);
-}
-
-/**
- * Articles written in /admin live in the articles service (D1), not in the Substack/LinkedIn cache, so they
- * are merged in at request time: a newly published article shows up at once instead of at the next hourly
- * rebuild. Best-effort by design — if the service is unreachable the feed is simply what it was before.
- */
-async function withNative(env, posts) {
-  if (!env.ARTICLES) return posts;
+  const wantAll = new URL(request.url).searchParams.get("all") === "1";
+  let posts = [];
   try {
     const res = await env.ARTICLES.fetch("https://motethansen.com/writing/index.json");
-    if (!res.ok) return posts;
-    const native = (await res.json()).articles || [];
-    const seen = new Set(native.map((p) => p.url));
-    const merged = [...native, ...posts.filter((p) => !seen.has(p.url))];
-    return merged.sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
+    if (!res.ok) return jsonResponse({ error: "Articles are temporarily unavailable." }, 502);
+    posts = (await res.json()).articles || [];
   } catch (e) {
-    console.warn("[writing] native articles unavailable:", e?.message);
-    return posts;
+    console.warn("[writing] articles service unreachable:", e?.message);
+    return jsonResponse({ error: "Articles are temporarily unavailable." }, 502);
   }
+  posts.sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0));
+  const shown = wantAll ? posts : posts.slice(0, HOME_LIMIT);
+  return jsonResponse({ posts: proxyImages(shown), total: posts.length });
 }
 
 export async function onRequestOptions() {
   return new Response(null, { headers: corsHeaders() });
 }
 
-/** Live per-source status — no merged-cache read, no merged-cache write. */
-async function debugResponse(env) {
-  const build = await buildFeed(env);
-  return jsonResponse({
-    complete: build.complete,
-    degraded: build.degraded,
-    total: build.posts.length,
-    sources: build.sources,
-    byPlatform: build.posts.reduce((acc, p) => {
-      const k = `${p.platform}/${p.source}`;
-      acc[k] = (acc[k] || 0) + 1;
-      return acc;
-    }, {}),
-  });
-}
-
 /**
- * Hosts whose images we re-serve from our own origin via /img.
- * `media.licdn.com` is the one that matters: Firefox classes LinkedIn as a
- * social tracker, so Enhanced Tracking Protection blocks it outright (on by
- * default in private windows). The Substack hosts are proxied for the same
- * caching and no-Referer benefit, and so there is one code path, not two.
- * Keep in sync with the allowlist in functions/img.js.
+ * Hosts whose images we re-serve from our own origin via /img. `media.licdn.com` is the one that matters: Firefox
+ * classes LinkedIn as a social tracker, so Enhanced Tracking Protection blocks it outright. The Substack hosts are
+ * proxied for the same caching and no-Referer benefit. Keep in sync with the allowlist in functions/img.js.
  */
-const PROXY_IMAGE_HOSTS = new Set([
-  "media.licdn.com",
-  "substackcdn.com",
-  "substack-post-media.s3.amazonaws.com",
-]);
+const PROXY_IMAGE_HOSTS = new Set(["media.licdn.com", "substackcdn.com", "substack-post-media.s3.amazonaws.com"]);
 
-/**
- * Rewrite thumbnails to /img at RESPONSE time, never in storage — KV and the
- * per-source snapshots keep the original URLs, so changing or dropping the
- * proxy later needs no data migration and loses nothing.
- */
+/** Rewritten at response time only; the store keeps the original addresses. */
 function proxyImages(posts) {
   return posts.map((p) => {
     if (!p.image) return p;
     let host;
-    try {
-      host = new URL(p.image).hostname;
-    } catch {
-      return p;
-    }
-    if (!PROXY_IMAGE_HOSTS.has(host)) return p;
-    return { ...p, image: `/img?u=${encodeURIComponent(p.image)}` };
+    try { host = new URL(p.image).hostname; } catch { return p; }
+    return PROXY_IMAGE_HOSTS.has(host) ? { ...p, image: `/img?u=${encodeURIComponent(p.image)}` } : p;
   });
-}
-
-function feedResponse(fullPosts, wantAll, cached) {
-  const posts = wantAll ? fullPosts : fullPosts.slice(0, HOME_LIMIT);
-  return jsonResponse({ posts: proxyImages(posts), total: fullPosts.length, cached });
 }
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json",
-               "Cache-Control": "public, max-age=60", ...corsHeaders() },
+    headers: { "Content-Type": "application/json", "Cache-Control": status === 200 ? "public, max-age=60" : "no-store", ...corsHeaders() },
   });
 }
 
