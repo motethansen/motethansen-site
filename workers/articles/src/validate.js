@@ -1,4 +1,4 @@
-import { ENABLED_SITES } from "./sites.js";
+import { ENABLED_SITES, EXTERNAL_SOURCES } from "./sites.js";
 
 export const RESERVED_SLUGS = new Set(["rss-xml", "index-json", "new", "admin", "media", "api"]);
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -60,4 +60,33 @@ export function validateArticle(input, now = Math.floor(Date.now() / 1000)) {
   v.origin_url = origin || null;
 
   return { value: v, errors };
+}
+
+
+const MAX_ENTRIES = 200;
+
+/**
+ * Validate a push of linked-out entries. Returns { src, entries, errors }; an entry that fails is reported and skipped,
+ * so one bad item never blocks the others.
+ */
+export function validateIngest(body) {
+  const src = body && EXTERNAL_SOURCES[body.source];
+  if (!src) return { errors: ["Unknown source."] };
+  if (!Array.isArray(body.entries) || !body.entries.length) return { errors: ["No entries."] };
+  if (body.entries.length > MAX_ENTRIES) return { errors: [`At most ${MAX_ENTRIES} entries per push.`] };
+  const entries = [], errors = [];
+  body.entries.forEach((e, i) => {
+    const bad = msg => errors.push(`entry ${i}: ${msg}`);
+    let u;
+    try { u = new URL(String(e.url)); } catch { return bad("not a web address"); }
+    if (u.protocol !== "https:" || u.username || u.password || !src.host.test(u.hostname)) return bad("address not allowed for this source");
+    const title = String(e.title ?? "").trim();
+    if (!title || title.length > 300) return bad("title missing or too long");
+    const ts = Date.parse(e.date);
+    const description = String(e.description ?? "").trim().slice(0, 600);
+    let image = e.image ? String(e.image).trim() : null;
+    if (image && !isHttps(image)) image = null;
+    entries.push({ url: u.toString().replace(/#.*$/, ""), title, description, image, published_at: Number.isFinite(ts) ? Math.floor(ts / 1000) : null });
+  });
+  return { src, entries, errors };
 }

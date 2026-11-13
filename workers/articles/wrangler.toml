@@ -5,6 +5,7 @@ compatibility_date = "2024-09-23"
 workers_dev = false
 
 [[d1_databases]]
+migrations_dir = "migrations"
 binding = "DB"
 database_name = "motethansen-articles"
 database_id = "91461182-5c81-43f5-9871-e6111c1a3e9a"

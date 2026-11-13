@@ -10,10 +10,11 @@ import { login, logout, me } from "./auth.js";
 import { json, sameOrigin, requireAdmin } from "../../../shared/admin-http.js";
 import * as store from "./db.js";
 import { renderMarkdown, excerpt } from "./render.js";
-import { validateArticle } from "./validate.js";
+import { validateArticle, validateIngest } from "./validate.js";
 import { uploadImage, importImage, serveImage } from "./media.js";
 import { articlePage, feedEntry, rssFeed, listPage } from "./templates.js";
 import { siteOf, ENABLED_SITES } from "./sites.js";
+import { timingSafeEqualStr } from "../../../shared/admin-core.js";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const html = (body, status = 200, extra = {}) => new Response(body, {
@@ -36,6 +37,7 @@ export async function route(request, env) {
   const { pathname: path } = url;
   const method = request.method;
 
+  if (path === "/api/ingest/external") return ingest(request, env, method);
   if (path.startsWith("/api/admin/")) return admin(request, env, path.slice("/api/admin/".length), method);
   if (path === "/admin") return Response.redirect(new URL("/admin/", request.url).toString(), 308);
   if (path.startsWith("/admin/")) return adminUi(request, env);
@@ -53,7 +55,7 @@ export async function route(request, env) {
     });
   }
   if (path === "/writing/rss.xml") {
-    const list = (await store.listArticles(env.DB, { status: "published", site, limit: 30 }));
+    const list = (await store.listArticles(env.DB, { status: "published", site, limit: 30, external: false }));
     const full = await Promise.all(list.map(a => store.getById(env.DB, a.id)));
     return new Response(rssFeed(site, full, full.map(a => renderMarkdown(a.body_md))), {
       headers: { "Content-Type": "application/rss+xml; charset=utf-8", "Cache-Control": "public, max-age=300" },
@@ -87,6 +89,26 @@ async function adminUi(request, env) {
   return out;
 }
 
+/**
+ * POST /api/ingest/external  (Authorization: Bearer <INGEST_TOKEN>)
+ * { source: "va-substack", entries: [{ url, title, date, description, image }] } — pushed hourly by the mac-mini, which can
+ * read Substack when Cloudflare cannot (Substack answers Cloudflare's IPs with HTTP 429). Upserts by address; never deletes.
+ */
+async function ingest(request, env, method) {
+  if (method !== "POST") return json({ error: "Method not allowed." }, 405);
+  const given = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!env.INGEST_TOKEN || !given || !(await timingSafeEqualStr(given, env.INGEST_TOKEN))) return json({ error: "Not authorised." }, 401);
+  const body = await readJson(request);
+  const v = validateIngest(body);
+  if (!v.src) return json({ error: v.errors[0] }, 400);
+  let inserted = 0, updated = 0;
+  for (const e of v.entries) (await store.upsertExternal(env.DB, v.src, e)) === "inserted" ? inserted++ : updated++;
+  const now = Math.floor(Date.now() / 1000);
+  // what /api/health reads: when this source last synced, and what it saw
+  await env.SITE_KV.put(`external-sync-v1:${body.source}`, JSON.stringify({ ts: now, seen: v.entries.length, inserted, updated, skipped: v.errors.length }), { expirationTtl: 7 * 86400 });
+  return json({ ok: true, inserted, updated, skipped: v.errors });
+}
+
 async function readJson(request) {
   try { return await request.json(); } catch { return null; }
 }
@@ -105,7 +127,7 @@ async function admin(request, env, sub, method) {
   if (sub === "articles" && method === "GET") {
     const u = new URL(request.url);
     const status = ["draft", "published"].includes(u.searchParams.get("status")) ? u.searchParams.get("status") : null;
-    return json({ articles: await store.listArticles(env.DB, { status, q: u.searchParams.get("q") || null }) });
+    return json({ articles: await store.listArticles(env.DB, { status, q: u.searchParams.get("q") || null, external: false }) });
   }
   if (sub === "articles" && method === "POST") {
     const body = await readJson(request);
