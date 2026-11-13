@@ -598,3 +598,40 @@ test("cards: a hostile image address from a feed cannot break out of the attribu
   const h = await (await vcall(env, "/writing/")).text();
   assert.doesNotMatch(h, /<script>alert/); assert.match(h, /&quot;&gt;&lt;script&gt;/);
 });
+
+// ---------- a migrated article replaces the linked-out original ----------
+const OLD_LI = "https://www.linkedin.com/pulse/connected-smart-nations-possible-michael-motet-hansen-mba";
+const legacy = env => push(env, { source: "linkedin-legacy", entries: [{ url: OLD_LI, title: "Will connected Smart Nations be possible?", date: "2017-03-31T00:00:00Z", description: "old", image: null }] });
+const titles = async (env, path = "/writing/index.json") => (await (await call(env, path)).json()).articles.map(a => a.title);
+
+test("migration: once a copy lists the original address and is published, the linked-out entry steps aside; unpublishing brings it back", async () => {
+  const env = makeEnv(); const cookie = await signedIn(env); await legacy(env);
+  assert.deepEqual(await titles(env), ["Will connected Smart Nations be possible?"]);                 // only the legacy entry
+  const a = await make(env, cookie, { title: "Will connected Smart Nations be possible?", origin_url: OLD_LI + "/?trk=public#x" });
+  assert.equal(a.origin_url, OLD_LI);                                                                  // stored normalised
+  assert.equal((await titles(env)).length, 1);                                                          // draft copy: legacy still shown, no duplicate
+  await call(env, `/api/admin/articles/${a.id}/publish`, { method: "POST", cookie });
+  const list = (await (await call(env, "/writing/index.json")).json()).articles;
+  assert.equal(list.length, 1); assert.equal(list[0].sourceId, "native");                              // the copy replaced the original
+  await call(env, `/api/admin/articles/${a.id}/unpublish`, { method: "POST", cookie });
+  assert.equal((await (await call(env, "/writing/index.json")).json()).articles[0].sourceId, "external");
+});
+test("migration: an empty publish date takes the original's date; a date you set is kept", async () => {
+  const env = makeEnv(); const cookie = await signedIn(env); await legacy(env);
+  const a = await make(env, cookie, { title: "Copy one", origin_url: OLD_LI + "/" });
+  const p = await (await call(env, `/api/admin/articles/${a.id}/publish`, { method: "POST", cookie })).json();
+  assert.equal(p.published_at, Math.floor(Date.parse("2017-03-31T00:00:00Z") / 1000));
+  const b = await make(env, cookie, { title: "Copy two", origin_url: OLD_LI, published_at: 1700000000 });
+  assert.equal((await (await call(env, `/api/admin/articles/${b.id}/publish`, { method: "POST", cookie })).json()).published_at, 1700000000);
+  const c = await make(env, cookie, { title: "Not migrated", origin_url: "https://www.linkedin.com/pulse/something-else-entirely" });
+  assert.ok((await (await call(env, `/api/admin/articles/${c.id}/publish`, { method: "POST", cookie })).json()).published_at > 1_700_000_000);   // stamped now
+});
+test("migration: an unrelated legacy entry is not hidden, and the vizneo.com archive follows the same rule", async () => {
+  const env = makeEnv(); const cookie = await vizSignedIn(env);
+  await push(env, { source: "va-substack", entries: [va({ url: "https://vizneoacademy.substack.com/p/moved", title: "Moved to our site" }), va({ url: "https://vizneoacademy.substack.com/p/stays", title: "Stays on Substack" })] });
+  const a = await (await vcall(env, "/api/admin/articles", { method: "POST", cookie, body: { title: "Moved to our site", body_md: "text", origin_url: "https://vizneoacademy.substack.com/p/moved" } })).json();
+  await vcall(env, `/api/admin/articles/${a.id}/publish`, { method: "POST", cookie });
+  const html = await (await vcall(env, "/writing/")).text();
+  assert.equal(cardsOf(html).filter(c => c.includes("Moved to our site")).length, 1);
+  assert.equal(cardsOf(html).filter(c => c.includes("Stays on Substack")).length, 1);
+});
