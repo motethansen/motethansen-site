@@ -264,3 +264,12 @@ Write, preview, publish and delete articles at `motethansen.com/admin`; they are
   a preview URL (`<branch>.motethansen-site.pages.dev`), a safe place to test; production needs `main`.
 - **Tests:** `node --test tests/` (needs `npm install` in `workers/articles/` for markdown-it).
 - LinkedIn is no longer used (it challenges every non-browser client, 2026-11-13).
+
+## Substack + legacy LinkedIn entries (linked-out rows)
+Substack posts and the 9 old LinkedIn articles are rows in the article store (`external_url`, `source`, `platform`; migration
+`0002_external.sql`). They list on the sites their source is configured for (`EXTERNAL_SOURCES` in `workers/articles/src/sites.js`:
+Vizneo Academy -> motethansen.com + vizneo.com, Urban Life Works -> motethansen.com) and link out; they get no page and no RSS item.
+**Substack 429s Cloudflare, so the site never fetches it.** `scripts/substack_sync.py` runs hourly on the **thinkpad**
+(`~/.config/systemd/user/substack-sync.timer`, token in `~/.config/motethansen/ingest-token`) and pushes both feeds to
+`POST /api/ingest/external` (bearer `INGEST_TOKEN`, Worker secret). The mac-mini cannot reach motethansen.com/vizneo.com (its dual
+en0/en1 route on 192.168.0.0/24, see netwatch notes), so it is not used. Pushes upsert by address and never delete; a hidden entry stays hidden.
