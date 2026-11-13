@@ -11,8 +11,8 @@ import { json, sameOrigin, requireAdmin } from "../../../shared/admin-http.js";
 import * as store from "./db.js";
 import { renderMarkdown, excerpt } from "./render.js";
 import { validateArticle } from "./validate.js";
-import { uploadImage, serveImage } from "./media.js";
-import { articlePage, feedEntry, rssFeed } from "./templates.js";
+import { uploadImage, importImage, serveImage } from "./media.js";
+import { articlePage, feedEntry, rssFeed, listPage } from "./templates.js";
 import { siteOf, ENABLED_SITES } from "./sites.js";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
@@ -37,6 +37,8 @@ export async function route(request, env) {
   const method = request.method;
 
   if (path.startsWith("/api/admin/")) return admin(request, env, path.slice("/api/admin/".length), method);
+  if (path === "/admin") return Response.redirect(new URL("/admin/", request.url).toString(), 308);
+  if (path.startsWith("/admin/")) return adminUi(request, env);
 
   if (method !== "GET" && method !== "HEAD") return new Response("Method not allowed", { status: 405 });
   if (path.startsWith("/media/")) return serveImage(env, path, method);
@@ -57,6 +59,11 @@ export async function route(request, env) {
       headers: { "Content-Type": "application/rss+xml; charset=utf-8", "Cache-Control": "public, max-age=300" },
     });
   }
+  if (path === "/writing" || path === "/writing/") {
+    // motethansen.com keeps its static archive page (its Pages function never forwards this path); other sites render it here.
+    const list = await store.listArticles(env.DB, { status: "published", site, limit: 500 });
+    return html(listPage(site, list), 200, { "Cache-Control": "public, max-age=60, s-maxage=120" });
+  }
   const m = path.match(/^\/writing\/([a-z0-9][a-z0-9-]{1,98}[a-z0-9])\/?$/);
   if (m) {
     const a = await store.getPublishedBySlug(env.DB, m[1], site);
@@ -64,6 +71,20 @@ export async function route(request, env) {
     return html(articlePage(site, a, renderMarkdown(a.body_md)), 200, { "Cache-Control": "public, max-age=60, s-maxage=120" });
   }
   return new Response("Not found", { status: 404 });
+}
+
+/** The editor page and its scripts, served from this Worker's own assets so every site shares one copy. */
+const ADMIN_HEADERS = {
+  "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' https:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+  "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer",
+  "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow",
+};
+async function adminUi(request, env) {
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+  const res = await env.ASSETS.fetch(request);
+  const out = new Response(res.body, res);
+  for (const [k, v] of Object.entries(ADMIN_HEADERS)) out.headers.set(k, v);
+  return out;
 }
 
 async function readJson(request) {
@@ -79,7 +100,7 @@ async function admin(request, env, sub, method) {
   if (auth instanceof Response) return auth;
   if (method !== "GET" && !sameOrigin(request)) return json({ error: "Bad origin." }, 403);
 
-  if (sub === "config" && method === "GET") return json({ sites: ENABLED_SITES });
+  if (sub === "config" && method === "GET") return json({ sites: ENABLED_SITES, current: siteOf(request) });
 
   if (sub === "articles" && method === "GET") {
     const u = new URL(request.url);
@@ -89,7 +110,7 @@ async function admin(request, env, sub, method) {
   if (sub === "articles" && method === "POST") {
     const body = await readJson(request);
     if (!body) return json({ error: "Bad request." }, 400);
-    const { value, errors } = validateArticle({ sites: ENABLED_SITES, ...body });
+    const { value, errors } = validateArticle({ sites: [siteOf(request)], ...body });
     if (errors.length) return json({ error: errors[0], errors }, 400);
     try {
       return json(await store.createArticle(env.DB, value), 201);
@@ -135,6 +156,12 @@ async function admin(request, env, sub, method) {
     const body = await readJson(request);
     if (!body || typeof body.body_md !== "string") return json({ error: "Bad request." }, 400);
     return json({ html: renderMarkdown(body.body_md), excerpt: excerpt(body.body_md) });
+  }
+  if (sub === "media/import" && method === "POST") {
+    const body = await readJson(request);
+    if (!body || typeof body.url !== "string") return json({ error: "Bad request." }, 400);
+    const r = await importImage(env, body.url);
+    return json(r.body, r.status);
   }
   if (sub === "media" && method === "POST") {
     const r = await uploadImage(env, request);
