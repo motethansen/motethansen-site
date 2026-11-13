@@ -57,7 +57,8 @@ export function validateArticle(input, now = Math.floor(Date.now() / 1000)) {
 
   const origin = input.origin_url == null ? "" : String(input.origin_url).trim();
   if (origin && !isHttps(origin)) errors.push("The original address must start with https://");
-  v.origin_url = origin || null;
+  // stored without query, fragment or trailing slash, so it matches the address the original entry is listed under
+  v.origin_url = origin ? origin.replace(/[?#].*$/, "").replace(/\/+$/, "") : null;
 
   return { value: v, errors };
 }

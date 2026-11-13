@@ -14,6 +14,9 @@ export async function listArticles(db, { status = null, site = null, q = null, l
         AND (? IS NULL OR EXISTS (SELECT 1 FROM json_each(articles.sites) WHERE value = ?))
         AND (? IS NULL OR title LIKE ? ESCAPE '\\')
         AND (? IS NULL OR (? = 1) = (external_url IS NOT NULL))
+        AND NOT (external_url IS NOT NULL AND EXISTS (          -- a linked-out entry steps aside once its own copy is published here
+              SELECT 1 FROM articles n WHERE n.external_url IS NULL AND n.status = 'published' AND n.origin_url IS NOT NULL
+                 AND rtrim(n.origin_url, '/') = rtrim(articles.external_url, '/')))
       ORDER BY COALESCE(published_at, created_at) DESC, created_at DESC
       LIMIT ?`,
   ).bind(status, status, site, site, like, like, external === null ? null : +external, external === null ? null : +external, Math.min(limit, 500)).all();
@@ -54,7 +57,11 @@ export async function updateArticle(db, id, a, now = Math.floor(Date.now() / 100
 export async function setStatus(db, id, status, now = Math.floor(Date.now() / 1000)) {
   // publishing stamps the date once; unpublishing keeps it so re-publishing does not reorder history
   const r = await db.prepare(
-    `UPDATE articles SET status = ?, published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, ?) ELSE published_at END,
+    `UPDATE articles SET status = ?,
+            published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at,
+                 (SELECT e.published_at FROM articles e WHERE e.external_url IS NOT NULL AND e.published_at IS NOT NULL    -- the original's date, when migrating
+                    AND articles.origin_url IS NOT NULL AND rtrim(e.external_url, '/') = rtrim(articles.origin_url, '/') LIMIT 1), ?)
+               ELSE published_at END,
             updated_at = ? WHERE id = ?`,
   ).bind(status, status, now, now, id).run();
   return r.meta.changes ? getById(db, id) : null;
