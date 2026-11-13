@@ -378,7 +378,7 @@ test("linked-out entries: listed on the sites their source is configured for, li
   const viz = (await (await vcall(env, "/writing/index.json")).json()).articles;
   assert.deepEqual(viz.map(a => a.title), ["From one prompt to a Scrum team"]);       // Vizneo Academy only, not Urban Life Works
   const vizList = await (await vcall(env, "/writing/")).text();
-  assert.match(vizList, /href="https:\/\/vizneoacademy\.substack\.com\/p\/from-one-prompt" target="_blank"/); assert.match(vizList, /Substack, Vizneo Academy/);
+  assert.match(vizList, /href="https:\/\/vizneoacademy\.substack\.com\/p\/from-one-prompt" target="_blank"/); assert.match(vizList, /Vizneo Academy/); assert.match(vizList, /Read on Substack/);
 
   const slug = env.DB.raw.prepare("SELECT slug FROM articles WHERE title = 'ULW piece'").get().slug;
   assert.equal((await call(env, `/writing/${slug}/`)).status, 404);                   // no page of our own
@@ -533,4 +533,68 @@ test("the editor's security policy allows only the privacy-enhanced YouTube fram
   const env = { ...makeEnv(), ASSETS: { fetch: async () => new Response("x") } };
   const csp = (await call(env, "/admin/")).headers.get("content-security-policy");
   assert.match(csp, /frame-src https:\/\/www\.youtube-nocookie\.com;/); assert.match(csp, /default-src 'none'/);
+});
+
+
+// ---------- the vizneo.com archive as cards ----------
+import { firstImage, clip } from "../workers/articles/src/render.js";
+const cardsOf = html => html.split('<li class="card').slice(1);
+
+test("cards: helpers pick the first showable image and clip at a word boundary", () => {
+  assert.equal(firstImage("text ![a](/media/2026/11/x.png) ![b](https://e.com/b.png)"), "/media/2026/11/x.png");
+  assert.equal(firstImage("![a](http://insecure/a.png) ![b](../../etc/passwd) ![c](javascript:alert(1)) ![d](https://ok.com/d.png \"title\")"), "https://ok.com/d.png");
+  assert.equal(firstImage("no pictures [link](https://x.y)"), null);
+  assert.equal(clip("short"), "short"); const c = clip("word ".repeat(100), 50);
+  assert.ok(c.length <= 50 && c.endsWith("…") && !/\s…$/.test(c));
+});
+test("cards: a linked-out entry shows its cover, source, brief and a 'Read on Substack' link that opens in a new tab", async () => {
+  const env = makeEnv();
+  await push(env, { source: "va-substack", entries: [va({ url: "https://vizneoacademy.substack.com/p/with-cover", title: "With <cover> & \"quotes\"", description: "A brief about the post.", image: "https://substackcdn.com/image/fetch/c.png" })] });
+  const [card] = cardsOf(await (await vcall(env, "/writing/")).text());
+  assert.match(card, /<img src="https:\/\/substackcdn\.com\/image\/fetch\/c\.png" alt=""/);
+  assert.match(card, /With &lt;cover&gt; &amp; &quot;quotes&quot;/);                      // escaped
+  assert.match(card, /A brief about the post\./); assert.match(card, /<p class="card__meta">[^<]*· Vizneo Academy<\/p>/);
+  assert.match(card, /class="card__cta" href="https:\/\/vizneoacademy\.substack\.com\/p\/with-cover" target="_blank" rel="noopener">Read on Substack/);
+  assert.match(card, /referrerpolicy="no-referrer"/);
+});
+test("cards: an article written here uses its cover, else the first picture in its text, else no image; and always has a brief", async () => {
+  const env = makeEnv(); const cookie = await vizSignedIn(env);
+  const pub = async over => { const a = await (await vcall(env, "/api/admin/articles", { method: "POST", cookie, body: over })).json();
+    await vcall(env, `/api/admin/articles/${a.id}/publish`, { method: "POST", cookie }); return a; };
+  const up = async () => (await (await vcall(env, "/api/admin/media", { method: "POST", cookie, raw: PNG, headers: { "content-type": "image/png" } })).json()).url;
+  const cover = await up(), inline = await up();
+  await pub({ title: "Has cover", body_md: "Body one", description: "Written brief.", cover });
+  await pub({ title: "Picture in text", body_md: `Opening **words** of the article that become the brief.\n\n![fig](${inline})\n\nMore.`, published_at: 1700000000 });
+  await pub({ title: "No picture", body_md: "Only words here, nothing else to see.", published_at: 1600000000 });
+  const html = await (await vcall(env, "/writing/")).text();
+  const by = t => cardsOf(html).find(c => c.includes(`>${t}</a>`));
+  assert.ok(by("Has cover").includes(`<img src="${cover}"`)); assert.match(by("Has cover"), /Written brief\./);
+  assert.ok(by("Picture in text").includes(`<img src="${inline}"`));                       // falls back to the first picture in the text
+  assert.match(by("Picture in text"), /Opening words of the article that become the brief\./);  // markdown stripped
+  assert.doesNotMatch(by("No picture"), /<img/); assert.match(by("No picture"), /card--plain/); assert.match(by("No picture"), /Only words here/);
+  for (const t of ["Has cover", "Picture in text", "No picture"]) {
+    assert.match(by(t), /class="card__cta" href="https:\/\/vizneo\.com\/writing\/[a-z-]+\/">Read the full article/);
+    assert.doesNotMatch(by(t), /target="_blank"/);                                         // our own pages open in the same tab
+  }
+});
+test("cards: newest first, and the newest card that has a picture is the featured one", async () => {
+  const env = makeEnv();
+  await push(env, { source: "va-substack", entries: [
+    va({ url: "https://vizneoacademy.substack.com/p/newest-no-image", title: "Newest no image", date: "2026-03-01T00:00:00Z", image: null }),
+    va({ url: "https://vizneoacademy.substack.com/p/second-with-image", title: "Second with image", date: "2026-02-01T00:00:00Z" }),
+    va({ url: "https://vizneoacademy.substack.com/p/third-with-image", title: "Third with image", date: "2026-01-01T00:00:00Z" })] });
+  const cards = cardsOf(await (await vcall(env, "/writing/")).text());
+  assert.deepEqual(cards.map(c => c.match(/card__title"><a [^>]*>([^<]+)</)[1]), ["Newest no image", "Second with image", "Third with image"]);
+  assert.ok(cards[1].startsWith(" card--featured")); assert.equal(cards.filter(c => c.includes("card--featured")).length, 1);
+  assert.match(cards[0], /card--plain/);
+});
+test("cards: an empty archive says so, and the page keeps its title and canonical", async () => {
+  const env = makeEnv(); const h = await (await vcall(env, "/writing/")).text();
+  assert.match(h, /Nothing published yet/); assert.match(h, /<title>Writing — Vizneo<\/title>/); assert.match(h, /rel="canonical" href="https:\/\/vizneo\.com\/writing\/"/);
+});
+test("cards: a hostile image address from a feed cannot break out of the attribute", async () => {
+  const env = makeEnv();
+  await push(env, { source: "va-substack", entries: [va({ url: "https://vizneoacademy.substack.com/p/hostile", title: "Hostile", image: 'https://substackcdn.com/x.png?a="><script>alert(1)</script>' })] });
+  const h = await (await vcall(env, "/writing/")).text();
+  assert.doesNotMatch(h, /<script>alert/); assert.match(h, /&quot;&gt;&lt;script&gt;/);
 });
