@@ -2,11 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   checkCredentials, signSession, verifySession, throttleState, recordFailure,
-  validateArticleUrl, slugOf, THROTTLE_MAX_FAILS, THROTTLE_WINDOW_S,
+  THROTTLE_MAX_FAILS, THROTTLE_WINDOW_S,
 } from "../shared/admin-core.js";
 import { onRequestPost as login } from "../functions/api/admin/login.js";
-import { onRequestPost as add } from "../functions/api/admin/add.js";
-import { onRequestGet as status } from "../functions/api/admin/status.js";
 import { onRequestGet as me } from "../functions/api/admin/me.js";
 
 const NOW = 1_800_000_000;
@@ -57,17 +55,6 @@ test("throttle: locks after the max failures, lifts after the window", () => {
   assert.equal(throttleState(recordFailure(null, NOW), NOW + 1).locked, false);
 });
 
-test("article address validation", () => {
-  assert.equal(validateArticleUrl(" https://www.linkedin.com/pulse/my-article-michael-hansen-abc12/?trk=x#y "),
-    "https://www.linkedin.com/pulse/my-article-michael-hansen-abc12");
-  for (const bad of ["http://www.linkedin.com/pulse/a-b-c", "https://linkedin.com/pulse/a-b-c", "https://www.linkedin.com/in/someone",
-    "https://www.linkedin.com/pulse/", "https://evil.com/www.linkedin.com/pulse/a-b-c", "https://www.linkedin.com.evil.com/pulse/a-b-c",
-    "https://www.linkedin.com/pulse/a/b", "javascript:alert(1)", "not a url", "https://www.linkedin.com/pulse/a b c"]) {
-    assert.throws(() => validateArticleUrl(bad), undefined, bad);
-  }
-  assert.equal(slugOf("https://www.linkedin.com/pulse/My-Slug-1"), "my-slug-1");
-});
-
 test("login: wrong password 401, throttled after 5, right password sets a hardened cookie", async () => {
   const SITE_KV = kv();
   const env = { ...ENV, SITE_KV };
@@ -96,37 +83,12 @@ async function signedIn(env) {
   return cookieOf(r);
 }
 
-test("add: needs a session, same origin and a LinkedIn article address", async () => {
+test("me: reports the signed-in user, 401 otherwise", async () => {
   const env = { ...ENV, SITE_KV: kv() };
-  const body = { url: "https://www.linkedin.com/pulse/new-one-michael-hansen-zz9" };
-  assert.equal((await add({ request: req("/api/admin/add", { body }), env })).status, 401);
   const cookie = await signedIn(env);
-  assert.equal((await add({ request: req("/api/admin/add", { body, cookie, origin: "https://evil.example" }), env })).status, 403);
-  assert.equal((await add({ request: req("/api/admin/add", { body: { url: "https://example.com/x" }, cookie }), env })).status, 400);
-  assert.equal((await add({ request: req("/api/admin/add", { body: {}, cookie }), env })).status, 400);
-});
-
-test("add: queues a new article for the droplet; reports an existing one as live", async () => {
-  const SITE_KV = kv({ "linkedin-posts-v1": [{ url: "https://www.linkedin.com/pulse/already-here-michael-hansen" }] });
-  const env = { ...ENV, SITE_KV };
-  const cookie = await signedIn(env);
-
-  const known = await (await add({ request: req("/api/admin/add", { cookie, body: { url: "https://www.linkedin.com/pulse/already-here-michael-hansen/?x=1" } }), env })).json();
-  assert.equal(known.state, "live");
-  assert.equal([...SITE_KV.m.keys()].filter(k => k.startsWith("linkedin-pending:")).length, 0);
-
-  const res = await add({ request: req("/api/admin/add", { cookie, body: { url: "https://www.linkedin.com/pulse/brand-new-michael-hansen-q1/" } }), env });
-  const d = await res.json();
-  assert.equal(d.state, "queued");
-  assert.deepEqual(JSON.parse(SITE_KV.m.get(`linkedin-pending:${d.id}`)).url, "https://www.linkedin.com/pulse/brand-new-michael-hansen-q1");
-  assert.equal(JSON.parse(SITE_KV.m.get(`linkedin-add-status:${d.id}`)).state, "queued");
-
-  // the status endpoint serves what the droplet writes, to signed-in users only
-  SITE_KV.m.set(`linkedin-add-status:${d.id}`, JSON.stringify({ state: "published", url: d.url, title: "Brand new" }));
-  const st = await status({ request: req(`/api/admin/status?id=${d.id}`, { method: "GET", cookie }), env });
-  assert.equal((await st.json()).state, "published");
-  assert.equal((await status({ request: req(`/api/admin/status?id=${d.id}`, { method: "GET" }), env })).status, 401);
-  assert.equal((await status({ request: req(`/api/admin/status?id=../etc`, { method: "GET", cookie }), env })).status, 400);
-  assert.equal((await me({ request: req("/api/admin/me", { method: "GET", cookie }), env })).status, 200);
+  const ok = await me({ request: req("/api/admin/me", { method: "GET", cookie }), env });
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).user, "michael");
   assert.equal((await me({ request: req("/api/admin/me", { method: "GET" }), env })).status, 401);
+  assert.equal((await me({ request: req("/api/admin/me", { method: "GET", cookie: "admin_session=forged.value" }), env })).status, 401);
 });

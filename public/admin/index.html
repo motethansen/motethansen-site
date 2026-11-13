@@ -9,7 +9,7 @@
 </head>
 <body>
   <main>
-    <h1>Publish a LinkedIn article</h1>
+    <h1>Admin</h1>
 
     <form id="login" hidden autocomplete="on">
       <label for="user">Username</label>
@@ -20,14 +20,10 @@
       <p class="msg" id="login-msg" role="alert"></p>
     </form>
 
-    <form id="add" hidden>
-      <label for="url">LinkedIn article address</label>
-      <input id="url" name="url" type="url" inputmode="url" placeholder="https://www.linkedin.com/pulse/…" required autofocus>
-      <button type="submit" id="save">Save</button>
-      <p class="msg" id="add-msg" role="alert"></p>
-      <ul id="jobs"></ul>
+    <section id="home" hidden>
+      <p>You are signed in. The article editor goes here.</p>
       <button type="button" id="logout" class="link">Sign out</button>
-    </form>
+    </section>
   </main>
   <script src="/admin/admin.js" defer></script>
 </body>

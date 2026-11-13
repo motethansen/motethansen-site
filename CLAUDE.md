@@ -247,11 +247,8 @@ Cloudflare. Update the model column when you switch models; it goes stale silent
 Michael Motet Hansen — hansenmichaelmotet@gmail.com
 ORCID: 0000-0001-7645-5958
 
-## /admin — publish a LinkedIn article by pasting its address
-`public/admin/` (page) + `functions/api/admin/{login,logout,me,add,status}.js` + `shared/admin-core.js|admin-http.js`.
-Username/password login (Pages secrets `ADMIN_USER`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`), HMAC-signed 12 h
-session cookie, 5 failures / 15 min lockout per IP. `add.js` validates the address and writes
-`linkedin-pending:<id>` to KV; the droplet's `linkedin-admin-poll.timer` (every 60 s, `linkedin-sync/admin_poll.py`)
-picks it up, runs the sync with `--no-discover`, and writes `linkedin-add-status:<id>`, which the page polls.
-`li-add` (linkedin-sync/tools/li_add.py) is the command-line equivalent. Both take the lock
-`/var/lock/linkedin-sync.lock` so two syncs never merge into KV at once.
+## /admin — sign-in shell (article editor to come)
+`public/admin/` + `functions/api/admin/{login,logout,me}.js` + `shared/admin-core.js|admin-http.js`. Username/password
+(Pages secrets `ADMIN_USER`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`), HMAC-signed 12 h cookie, 5 failures / 15 min
+lockout per IP, same-origin check on POSTs, strict CSP in `public/_headers`. LinkedIn is no longer used (it challenges
+every non-browser client, 2026-11-13); the LinkedIn address queue, droplet poller and `li-add` were removed.

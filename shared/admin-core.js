@@ -4,7 +4,6 @@
  *   - constant-time credential comparison
  *   - HMAC-signed session tokens (no server-side session store)
  *   - login throttling decision
- *   - LinkedIn article address validation (same rules as linkedin-sync/tools/handoff_urls.py)
  */
 
 export const SESSION_COOKIE = "admin_session";
@@ -78,18 +77,3 @@ export function recordFailure(record, nowS) {
   const live = record && nowS - record.first < THROTTLE_WINDOW_S ? record : null;
   return { fails: (live?.fails || 0) + 1, first: live?.first || nowS };
 }
-
-const ARTICLE_RE = /^https:\/\/www\.linkedin\.com\/pulse\/([A-Za-z0-9-]{3,300})$/;
-
-/** Normalise and validate a LinkedIn article address. Throws Error(message) when it is not one. */
-export function validateArticleUrl(input) {
-  let u;
-  try { u = new URL(String(input).trim()); } catch { throw new Error("That is not a web address."); }
-  if (u.protocol !== "https:") throw new Error("The address must start with https://");
-  if (u.hostname !== "www.linkedin.com" || u.port) throw new Error("The address must be on www.linkedin.com");
-  const clean = `https://${u.hostname}${u.pathname.replace(/\/+$/, "")}`;   // drops ?query, #fragment, trailing /
-  if (!ARTICLE_RE.test(clean)) throw new Error("Expected an article address like https://www.linkedin.com/pulse/your-article-slug");
-  return clean;
-}
-
-export const slugOf = url => (url.match(/\/pulse\/([^/?#]+)/i) || [])[1]?.toLowerCase() || "";
